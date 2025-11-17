@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TSF LoRaWAN ULP Gateway</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <meta charset="UTF-8">
+</head>
+<body>
+    <div class="topnav">
+        <h1>TSF LoRaWAN ULP Gateway</h1>
+    </div>
+
+    <!-- BLE Connection Controls - Always Visible -->
+    <div class="content">
+        <div class="card-grid">
+            <div class="card ble-connection-card">
+                <p>
+                    <button id="connectBleButton" class="connectButton"> Connect to BLE Device</button>
+                    <button id="disconnectBleButton" class="disconnectButton"> Disconnect BLE Device</button>
+                </p>
+                <p class="gray-label">BLE state: <strong><span id="bleState" style="color:#d13a30;">Disconnected</span></strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-container">
+        <div class="tab-nav">
+            <button class="tab-button active" data-tab="dashboard">Dashboard</button>
+            <button class="tab-button" data-tab="settings">Settings</button>
+        </div>
+    </div>
+
+    <!-- Dashboard Tab Content -->
+    <div class="tab-content active" id="dashboard">
+        <div class="content">
+            <!-- Power Management -->
+            <div class="card-grid">
+                <div class="card">
+                    <h2>Power Management</h2>
+                    <p class="reading">Supply Voltage: <span id="supplyVoltage">--</span> V</p>
+                    <p class="reading">Battery Voltage: <span id="batteryVoltage">--</span> V</p>
+                    <p class="reading">VBat: <span id="vbat">--</span> V</p>
+                    <p class="reading">Battery %: <span id="batteryPercent">--</span>%</p>
+                </div>
+                
+                <div class="card">
+                    <h2>Environmental</h2>
+                    <p class="reading">Temperature: <span id="temperature">--</span> °C</p>
+                    <p class="reading">Pressure: <span id="pressure">--</span> hPa</p>
+                    <p class="reading">Altitude: <span id="altitude">--</span> m</p>
+                </div>
+            </div>
+
+            <!-- Vibrating Wire Sensors - Grouped -->
+            <div class="card-grid">
+                <div class="card vw-parent-card">
+                    <h2>Vibrating Wire Sensors</h2>
+                    <div class="vw-sensors-grid">
+                        <div class="vw-sensor">
+                            <h3>Sensor 1</h3>
+                            <p class="reading">Temperature: <span id="tempvw1">--</span> °C</p>
+                            <p class="reading">Frequency: <span id="freqvw1">--</span> Hz</p>
+                        </div>
+                        
+                        <div class="vw-sensor">
+                            <h3>Sensor 2</h3>
+                            <p class="reading">Temperature: <span id="tempvw2">--</span> °C</p>
+                            <p class="reading">Frequency: <span id="freqvw2">--</span> Hz</p>
+                        </div>
+                        
+                        <div class="vw-sensor">
+                            <h3>Sensor 3</h3>
+                            <p class="reading">Temperature: <span id="tempvw3">--</span> °C</p>
+                            <p class="reading">Frequency: <span id="freqvw3">--</span> Hz</p>
+                        </div>
+                        
+                        <div class="vw-sensor">
+                            <h3>Sensor 4</h3>
+                            <p class="reading">Temperature: <span id="tempvw4">--</span> °C</p>
+                            <p class="reading">Frequency: <span id="freqvw4">--</span> Hz</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Motion Sensors -->
+            <div class="card-grid">
+                <div class="card">
+                    <h2>Accelerometer</h2>
+                    <p class="reading">X-axis: <span id="ax">--</span> mg</p>
+                    <p class="reading">Y-axis: <span id="ay">--</span> mg</p>
+                    <p class="reading">Z-axis: <span id="az">--</span> mg</p>
+                </div>
+                
+                <div class="card">
+                    <h2>Gyroscope</h2>
+                    <p class="reading">X-axis: <span id="gx">--</span> m°/s</p>
+                    <p class="reading">Y-axis: <span id="gy">--</span> m°/s</p>
+                    <p class="reading">Z-axis: <span id="gz">--</span> m°/s</p>
+                </div>
+            </div>
+
+            <!-- Orientation & Load Cell -->
+            <div class="card-grid">
+                <div class="card">
+                    <h2>Orientation</h2>
+                    <p class="reading">Pitch: <span id="pitch">--</span>°</p>
+                    <p class="reading">Roll: <span id="roll">--</span>°</p>
+                    <p class="reading">Yaw: <span id="yaw">--</span>°</p>
+                </div>
+                
+                <div class="card">
+                    <h2>Load Cell</h2>
+                    <p class="reading">Weight: <span id="loadcell">--</span> kg</p>
+                </div>
+            </div>
+
+            <!-- Control & Status -->
+            <div class="card-grid">
+                <div class="card">
+                    <!-- <h2>Control GPIO 2</h2> -->
+                    <!-- <button id="onButton" class="onButton">ON</button>
+                    <button id="offButton" class="offButton">OFF</button> -->
+                    <button id="refreshButton" class="subButton">Refresh All</button>
+                    <p class="gray-label">Last value sent: <span id="valueSent"></span></p>
+                </div>
+
+                <div class="card">
+                    <h2>Status</h2>
+                    <p class="reading">Connected Sensors: <span id="connectedCount">0</span></p>
+                    <p class="gray-label">Last reading: <span id="timestamp">--</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Tab Content -->
+    <div class="tab-content" id="settings">
+        <div class="content">
+            <div class="card-grid">
+                <div class="card">
+                    <h2>Device Configuration</h2>
+                    <div class="settings-group">
+                        <label for="deviceName">Device Name:</label>
+                        <input type="text" id="deviceName" value="TSFLora" class="settings-input">
+                    </div>
+                    <!-- <div class="settings-group">
+                        <label for="measurementInterval">Measurement Interval (s):</label>
+                        <input type="number" id="measurementInterval" value="60" min="1" max="3600" class="settings-input">
+                    </div> -->
+                    <div class="button-group">
+                        <button id="readSettingsBtn" class="subButton">Read from Device</button>
+                        <button id="writeSettingsBtn" class="onButton">Write to Device</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>LoRaWAN Configuration</h2>
+                    <div class="settings-group">
+                        <label for="devEUI">Device EUI:</label>
+                        <input type="text" id="devEUI" placeholder="0000000000000000" maxlength="16" class="settings-input eui-input">
+                        <small>Current: <span id="currentDevEUI">--</span></small>
+                    </div>
+                    <div class="settings-group">
+                        <label for="joinEUI">Join EUI:</label>
+                        <input type="text" id="joinEUI" placeholder="0000000000000000" maxlength="16" class="settings-input eui-input">
+                        <small>Current: <span id="currentJoinEUI">--</span></small>
+                    </div>
+                    <div class="settings-group">
+                        <label for="appKey">Application Key:</label>
+                        <input type="text" id="appKey" placeholder="00000000000000000000000000000000" maxlength="32" class="settings-input key-input">
+                        <small>Current: <span id="currentAppKey">--</span></small>
+                    </div>
+                    <div class="settings-group">
+                        <label for="nwkKey">Network Key:</label>
+                        <input type="text" id="nwkKey" placeholder="00000000000000000000000000000000" maxlength="32" class="settings-input key-input">
+                        <small>Current: <span id="currentNwkKey">--</span></small>
+                    </div>
+                    <div class="settings-group">
+                        <label for="measurementInterval">Measurement Interval (s):</label>
+                        <input type="number" id="measurementInterval" value="60" min="1" max="3600" class="settings-input">
+                        <small>Current: <span id="currentInterval">--</span></small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <h2>Current Device Settings</h2>
+                    <div class="reading-group">
+                        <p class="reading">Device EUI: <span id="readDevEUI">--</span></p>
+                        <p class="reading">Join EUI: <span id="readJoinEUI">--</span></p>
+                        <p class="reading">App Key: <span id="readAppKey">--</span></p>
+                        <p class="reading">Network Key: <span id="readNwkKey">--</span></p>
+                        <p class="reading">Interval: <span id="readInterval">--</span> s</p>
+                    </div>
+                    <!-- <div class="button-group">
+                        <button id="refreshSettingsBtn" class="subButton">Refresh Settings</button>
+                    </div> -->
+                </div>
+
+                <div class="card">
+                    <h2>Configuration File</h2>
+                    <div class="button-group">
+                        <button id="saveConfigBtn" class="connectButton">Save Config</button>
+                        <button id="loadConfigBtn" class="subButton">Load Config</button>
+                        <!-- <button id="exportConfigBtn" class="offButton">Export JSON</button> -->
+                    </div>
+                    <input type="file" id="configFileInput" accept=".json" style="display: none;">
+                    <div class="settings-group">
+                        <label for="configPreview">Configuration Preview:</label>
+                        <textarea id="configPreview" class="config-textarea" readonly></textarea>
+                    </div>
+                    <p class="gray-label">Configuration Status: <span id="configStatus">Not saved</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+    // Helper function to convert UUID from byte array to string format
+    function uuidFromBytes(bytes) {
+        const hex = bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hex.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5');
+    }
+
+    // Helper function to convert bytes to hex string
+    function bytesToHex(bytes) {
+        return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+    }
+
+    // Helper function to convert hex string to bytes
+    function hexToBytes(hex) {
+        const bytes = [];
+        for (let i = 0; i < hex.length; i += 2) {
+            bytes.push(parseInt(hex.substr(i, 2), 16));
+        }
+        return new Uint8Array(bytes);
+    }
+
+    // Helper function to reverse byte order for uint64
+    function reverseUint64Bytes(bytes) {
+        return new Uint8Array(bytes).reverse();
+    }
+
+    // DOM Elements
+    const connectButton = document.getElementById('connectBleButton');
+    const disconnectButton = document.getElementById('disconnectBleButton');
+    const onButton = document.getElementById('onButton');
+    const offButton = document.getElementById('offButton');
+    const refreshButton = document.getElementById('refreshButton');
+    const latestValueSent = document.getElementById('valueSent');
+    const bleStateContainer = document.getElementById('bleState');
+    const timestampContainer = document.getElementById('timestamp');
+    const connectedCountContainer = document.getElementById('connectedCount');
+
+    // Settings Elements
+    const readSettingsBtn = document.getElementById('readSettingsBtn');
+    const writeSettingsBtn = document.getElementById('writeSettingsBtn');
+    // const refreshSettingsBtn = document.getElementById('refreshSettingsBtn');
+    const saveConfigBtn = document.getElementById('saveConfigBtn');
+    const loadConfigBtn = document.getElementById('loadConfigBtn');
+    // const exportConfigBtn = document.getElementById('exportConfigBtn');
+    const configFileInput = document.getElementById('configFileInput');
+    const configPreview = document.getElementById('configPreview');
+    const configStatus = document.getElementById('configStatus');
+
+    // Tab functionality
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const tabName = button.dataset.tab;
+            switchTab(tabName);
+        });
+    });
+
+    function switchTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+    }
+
+    // Define BLE Device Specs
+    var deviceName = 'TSFLora';
+    var bleService = reverseUuidBytes('3fa85f64-5700-4562-b3fc-2c963f66afa6');
+
+    // Define all characteristic UUIDs matching your ble.cpp file
+    const characteristics = {
+        // Control characteristics
+        read: uuidFromBytes([0x29,0x08,0x56,0xcb, 0xae,0x88, 0x48,0x46, 0x98,0x8d, 0x56,0x9d,0x28,0xfd,0x1d,0x55]),
+        write: uuidFromBytes([0x3f,0xa8,0x5f,0x64, 0x57,0x17, 0x45,0x62, 0xb3,0xfc, 0x2c,0x96,0x3f,0x66,0xaf,0xa6]),
+        
+        // Power characteristics
+        supplyVoltage:  reverseUuidBytes('3fa85f64-5718-4562-b3fc-2c963f66afa6'),
+        batteryVoltage: reverseUuidBytes('3fa85f64-5719-4562-b3fc-2c963f66afa6'),
+        vbat:           reverseUuidBytes('3fa85f64-5720-4562-b3fc-2c963f66afa6'),
+        batteryPercent: reverseUuidBytes('3fa85f64-5721-4562-b3fc-2c963f66afa6'),
+
+        // Environmental
+        temperature:    reverseUuidBytes('3fa85f64-5722-4562-b3fc-2c963f66afa6'),
+        pressure:       reverseUuidBytes('3fa85f64-5723-4562-b3fc-2c963f66afa6'),
+        altitude:       reverseUuidBytes('3fa85f64-5724-4562-b3fc-2c963f66afa6'),
+        
+        // Vibrating Wire Temperature
+        tempvw1: reverseUuidBytes('3fa85f64-5725-4562-b3fc-2c963f66afa6'),
+        tempvw2: reverseUuidBytes('3fa85f64-5726-4562-b3fc-2c963f66afa6'),
+        tempvw3: reverseUuidBytes('3fa85f64-5727-4562-b3fc-2c963f66afa6'),
+        tempvw4: reverseUuidBytes('3fa85f64-5728-4562-b3fc-2c963f66afa6'),
+
+        // Vibrating Wire Frequency
+        freqvw1: reverseUuidBytes('3fa85f64-5729-4562-b3fc-2c963f66afa6'),
+        freqvw2: reverseUuidBytes('3fa85f64-5730-4562-b3fc-2c963f66afa6'),
+        freqvw3: reverseUuidBytes('3fa85f64-5731-4562-b3fc-2c963f66afa6'),
+        freqvw4: reverseUuidBytes('3fa85f64-5732-4562-b3fc-2c963f66afa6'),
+
+        // Accelerometer
+        ax: reverseUuidBytes('3fa85f64-5740-4562-b3fc-2c963f66afa6'),
+        ay: reverseUuidBytes('3fa85f64-5741-4562-b3fc-2c963f66afa6'),
+        az: reverseUuidBytes('3fa85f64-5742-4562-b3fc-2c963f66afa6'),
+
+        // Gyroscope
+        gx: reverseUuidBytes('3fa85f64-5743-4562-b3fc-2c963f66afa6'),
+        gy: reverseUuidBytes('3fa85f64-5744-4562-b3fc-2c963f66afa6'),
+        gz: reverseUuidBytes('3fa85f64-5745-4562-b3fc-2c963f66afa6'),
+
+        // Orientation
+        pitch: reverseUuidBytes('3fa85f64-5750-4562-b3fc-2c963f66afa6'),
+        roll: reverseUuidBytes('3fa85f64-5751-4562-b3fc-2c963f66afa6'),
+        yaw: reverseUuidBytes('3fa85f64-5752-4562-b3fc-2c963f66afa6'),
+
+        // Load cell
+        loadcell: reverseUuidBytes('3fa85f64-5760-4562-b3fc-2c963f66afa6'),
+
+        // Settings characteristics - matching your ble.cpp UUIDs
+        devEUI: reverseUuidBytes('3fa85f64-5890-4562-b3fc-2c963f66afa6'),
+        joinEUI: reverseUuidBytes('3fa85f64-5891-4562-b3fc-2c963f66afa6'),
+        appKey: reverseUuidBytes('3fa85f64-5892-4562-b3fc-2c963f66afa6'),
+        nwkKey: reverseUuidBytes('3fa85f64-5893-4562-b3fc-2c963f66afa6'),
+        interval: reverseUuidBytes('3fa85f64-5894-4562-b3fc-2c963f66afa6')
+    };
+
+    // Global Variables to Handle Bluetooth
+    var bleServer;
+    var bleServiceFound;
+    var connectedCharacteristics = {};
+
+    // Settings Configuration Object
+    let deviceConfig = {
+        device: {
+            name: "TSFLora",
+            measurementInterval: 60
+        },
+        lorawan: {
+            devEUI: "",
+            joinEUI: "",
+            appKey: "",
+            nwkKey: ""
+        }
+    };
+
+    // Event Listeners
+    connectButton.addEventListener('click', (event) => {
+        if (isWebBluetoothEnabled()) {
+            connectToDevice();
+        }
+    });
+
+    disconnectButton.addEventListener('click', disconnectDevice);
+    // onButton.addEventListener('click', () => writeOnCharacteristic(1));
+    // offButton.addEventListener('click', () => writeOnCharacteristic(0));
+    refreshButton.addEventListener('click', readAllCharacteristics);
+
+    // Settings Event Listeners
+    readSettingsBtn.addEventListener('click', readSettingsFromDevice);
+    writeSettingsBtn.addEventListener('click', writeSettingsToDevice);
+    // refreshSettingsBtn.addEventListener('click', readSettingsFromDevice);
+    saveConfigBtn.addEventListener('click', saveConfiguration);
+    loadConfigBtn.addEventListener('click', () => configFileInput.click());
+    // exportConfigBtn.addEventListener('click', exportConfiguration);
+    configFileInput.addEventListener('change', loadConfiguration);
+
+    // Update config preview when settings change
+    document.querySelectorAll('.settings-input').forEach(input => {
+        input.addEventListener('change', updateConfigFromUI);
+    });
+
+    function reverseUuidBytes(uuid) {
+        const hex = String(uuid).replace(/-/g, '');
+        if (!/^[0-9a-fA-F]{32}$/.test(hex)) {
+            throw new Error('Invalid UUID format');
+        }
+        const revHex = hex.match(/.{2}/g).reverse().join('');
+        return revHex.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5').toLowerCase();
+    }
+
+    function isWebBluetoothEnabled() {
+        if (!navigator.bluetooth) {
+            console.log('Web Bluetooth API is not available in this browser!');
+            bleStateContainer.innerHTML = "Web Bluetooth API is not available in this browser/device!";
+            return false;
+        }
+        console.log('Web Bluetooth API supported in this browser.');
+        return true;
+    }
+
+    function connectToDevice() {
+        console.log('Initializing Bluetooth...');
+        navigator.bluetooth.requestDevice({
+            filters: [{name: deviceName}],
+            optionalServices: [bleService]
+        })
+        .then(device => {
+            console.log('Device Selected:', device.name);
+            bleStateContainer.innerHTML = 'Connected to device ' + device.name;
+            bleStateContainer.style.color = "#24af37";
+            device.addEventListener('gattservicedisconnected', onDisconnected);
+            return device.gatt.connect();
+        })
+        .then(gattServer => {
+            bleServer = gattServer;
+            console.log("Connected to GATT Server");
+            return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            bleServiceFound = service;
+            console.log("Service discovered:", service.uuid);
+            return discoverAllCharacteristics();
+        })
+        .then(() => {
+            console.log("All characteristics discovered");
+            readAllCharacteristics();
+            // Automatically read settings when connected
+            setTimeout(readSettingsFromDevice, 1000);
+        })
+        .catch(error => {
+            console.log('Error: ', error);
+            bleStateContainer.innerHTML = "Connection failed";
+            bleStateContainer.style.color = "#d13a30";
+        });
+    }
+
+    async function discoverAllCharacteristics() {
+        let connectedCount = 0;
+        for (const [name, uuid] of Object.entries(characteristics)) {
+            try {
+                const characteristic = await bleServiceFound.getCharacteristic(uuid);
+                connectedCharacteristics[name] = characteristic;
+                connectedCount++;
+                
+                // Enable notifications if supported
+                if (characteristic.properties.notify) {
+                    characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                        handleCharacteristicChange(name, event.target.value);
+                    });
+                    await characteristic.startNotifications();
+                }
+                
+                console.log(`Characteristic ${name} discovered:`, uuid);
+            } catch (error) {
+                console.log(`Characteristic ${name} not found:`, error);
+            }
+        }
+        connectedCountContainer.innerHTML = connectedCount;
+    }
+
+    async function readAllCharacteristics() {
+        for (const [name, characteristic] of Object.entries(connectedCharacteristics)) {
+            // Skip settings characteristics in general read
+            if (['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval'].includes(name)) {
+                continue;
+            }
+            
+            try {
+                const value = await characteristic.readValue();
+                handleCharacteristicChange(name, value);
+            } catch (error) {
+                console.log(`Error reading ${name}:`, error);
+            }
+        }
+        timestampContainer.innerHTML = getDateTime();
+    }
+
+    function handleCharacteristicChange(characteristicName, value) {
+        const element = document.getElementById(characteristicName);
+        if (!element) return;
+
+        let displayValue;
+        
+        // Parse the value based on the characteristic type
+        if (value.byteLength === 4) {
+            // Float (4 bytes)
+            displayValue = new DataView(value.buffer).getFloat32(0, true).toFixed(4);
+        } else if (value.byteLength === 2) {
+            // 16-bit integer
+            const intValue = new DataView(value.buffer).getUint16(0, true);
+            // Apply scaling based on characteristic
+            if (characteristicName.includes('Voltage') || characteristicName.includes('voltage') || characteristicName === 'vbat') {
+                displayValue = (intValue / 1000).toFixed(2); // Voltage in mV to V
+            } else if (characteristicName.includes('temp')) {
+                displayValue = (intValue / 100).toFixed(1); // Temperature in c°C to °C
+            } else if (characteristicName.includes('freq')) {
+                displayValue = (intValue / 100).toFixed(1); // Frequency
+            } else if (characteristicName.includes('pressure')) {
+                displayValue = (intValue / 10).toFixed(1); // Pressure
+            } else if (characteristicName.includes('a') || characteristicName.includes('g')) {
+                displayValue = (intValue / 100).toFixed(2); // Accel/Gyro
+            } else if (characteristicName.includes('pitch') || characteristicName.includes('roll') || characteristicName.includes('yaw')) {
+                displayValue = (intValue / 100).toFixed(4); // Angles
+            } else {
+                displayValue = intValue.toString();
+            }
+        } else if (value.byteLength === 1) {
+            // 8-bit value (like battery percentage)
+            displayValue = new DataView(value.buffer).getUint8(0).toString();
+        } else {
+            // Try to decode as string
+            try {
+                displayValue = new TextDecoder().decode(value);
+            } catch {
+                displayValue = "Unknown format";
+            }
+        }
+        
+        element.innerHTML = displayValue;
+        console.log(`${characteristicName}: ${displayValue}`);
+    }
+
+    // Settings Functions
+    async function readSettingsFromDevice() {
+        const settingsCharacteristics = ['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval'];
+        
+        for (const charName of settingsCharacteristics) {
+            if (!connectedCharacteristics[charName]) {
+                console.log(`${charName} characteristic not available`);
+                continue;
+            }
+
+            try {
+                const value = await connectedCharacteristics[charName].readValue();
+                handleSettingsCharacteristic(charName, value);
+            } catch (error) {
+                console.error(`Error reading ${charName}:`, error);
+            }
+        }
+        
+        updateConfigFromCurrentSettings();
+        configStatus.textContent = 'Settings read from device';
+        configStatus.style.color = 'var(--success-color)';
+    }
+
+    function handleSettingsCharacteristic(characteristicName, value) {
+        let displayValue;
+        
+        switch (characteristicName) {
+            case 'devEUI':
+            case 'joinEUI':
+                // 8-byte values (uint64) - reverse byte order for display
+                if (value.byteLength === 8) {
+                    const reversedBytes = reverseUint64Bytes(new Uint8Array(value.buffer));
+                    displayValue = bytesToHex(reversedBytes);
+                    document.getElementById(`read${characteristicName.charAt(0).toUpperCase() + characteristicName.slice(1)}`).innerHTML = displayValue;
+                    document.getElementById(`current${characteristicName.charAt(0).toUpperCase() + characteristicName.slice(1)}`).innerHTML = displayValue;
+                }
+                break;
+                
+            case 'appKey':
+            case 'nwkKey':
+                // 16-byte values
+                if (value.byteLength === 16) {
+                    displayValue = bytesToHex(new Uint8Array(value.buffer));
+                    document.getElementById(`read${characteristicName.charAt(0).toUpperCase() + characteristicName.slice(1)}`).innerHTML = displayValue;
+                    document.getElementById(`current${characteristicName.charAt(0).toUpperCase() + characteristicName.slice(1)}`).innerHTML = displayValue;
+                }
+                break;
+                
+            case 'interval':
+                // 2-byte value
+                if (value.byteLength === 2) {
+                    displayValue = new DataView(value.buffer).getUint16(0, true);
+                    document.getElementById('readInterval').innerHTML = displayValue;
+                    document.getElementById('measurementInterval').value = displayValue;
+                    document.getElementById(`current${characteristicName.charAt(0).toUpperCase() + characteristicName.slice(1)}`).innerHTML = displayValue;
+                }
+                break;
+        }
+        
+        console.log(`${characteristicName}: ${displayValue}`);
+    }
+
+    async function writeSettingsToDevice() {
+        try {
+            // Write Device EUI
+            if (connectedCharacteristics.devEUI && document.getElementById('devEUI').value) {
+                const devEUIHex = document.getElementById('devEUI').value.replace(/[^0-9A-Fa-f]/g, '');
+                if (devEUIHex.length === 16) {
+                    const devEUIBytes = reverseUint64Bytes(hexToBytes(devEUIHex));
+                    await connectedCharacteristics.devEUI.writeValue(devEUIBytes);
+                    console.log('DevEUI written:', devEUIHex);
+                }
+            }
+
+            // Write Join EUI
+            if (connectedCharacteristics.joinEUI && document.getElementById('joinEUI').value) {
+                const joinEUIHex = document.getElementById('joinEUI').value.replace(/[^0-9A-Fa-f]/g, '');
+                if (joinEUIHex.length === 16) {
+                    const joinEUIBytes = reverseUint64Bytes(hexToBytes(joinEUIHex));
+                    await connectedCharacteristics.joinEUI.writeValue(joinEUIBytes);
+                    console.log('JoinEUI written:', joinEUIHex);
+                }
+            }
+
+            // Write App Key
+            if (connectedCharacteristics.appKey && document.getElementById('appKey').value) {
+                const appKeyHex = document.getElementById('appKey').value.replace(/[^0-9A-Fa-f]/g, '');
+                if (appKeyHex.length === 32) {
+                    const appKeyBytes = hexToBytes(appKeyHex);
+                    await connectedCharacteristics.appKey.writeValue(appKeyBytes);
+                    console.log('AppKey written:', appKeyHex);
+                }
+            }
+
+            // Write Network Key
+            if (connectedCharacteristics.nwkKey && document.getElementById('nwkKey').value) {
+                const nwkKeyHex = document.getElementById('nwkKey').value.replace(/[^0-9A-Fa-f]/g, '');
+                if (nwkKeyHex.length === 32) {
+                    const nwkKeyBytes = hexToBytes(nwkKeyHex);
+                    await connectedCharacteristics.nwkKey.writeValue(nwkKeyBytes);
+                    console.log('NwkKey written:', nwkKeyHex);
+                }
+            }
+
+            // Write Interval
+            if (connectedCharacteristics.interval && document.getElementById('measurementInterval').value) {
+                const interval = parseInt(document.getElementById('measurementInterval').value);
+                const intervalBytes = new Uint8Array(2);
+                new DataView(intervalBytes.buffer).setUint16(0, interval, true);
+                await connectedCharacteristics.interval.writeValue(intervalBytes);
+                console.log('Interval written:', interval);
+            }
+
+            alert('Settings successfully written to device');
+            
+            // Read back settings to confirm
+            setTimeout(readSettingsFromDevice, 500);
+            
+        } catch (error) {
+            console.error('Error writing settings:', error);
+            alert('Failed to write settings to device: ' + error.message);
+        }
+    }
+
+    function updateConfigFromCurrentSettings() {
+        deviceConfig.device.name = "TSFLora";
+        deviceConfig.device.measurementInterval = parseInt(document.getElementById('measurementInterval').value) || 60;
+        
+        deviceConfig.lorawan.devEUI = document.getElementById('currentDevEUI').textContent || "";
+        deviceConfig.lorawan.joinEUI = document.getElementById('currentJoinEUI').textContent || "";
+        deviceConfig.lorawan.appKey = document.getElementById('currentAppKey').textContent || "";
+        deviceConfig.lorawan.nwkKey = document.getElementById('currentNwkKey').textContent || "";
+        
+        updateConfigPreview();
+    }
+
+    function updateConfigFromUI() {
+        deviceConfig.device.name = document.getElementById('deviceName').value;
+        deviceConfig.device.measurementInterval = parseInt(document.getElementById('measurementInterval').value);
+        
+        deviceConfig.lorawan.devEUI = document.getElementById('devEUI').value;
+        deviceConfig.lorawan.joinEUI = document.getElementById('joinEUI').value;
+        deviceConfig.lorawan.appKey = document.getElementById('appKey').value;
+        deviceConfig.lorawan.nwkKey = document.getElementById('nwkKey').value;
+        
+        updateConfigPreview();
+    }
+
+    function updateUIFromConfig(config) {
+        document.getElementById('deviceName').value = config.device.name;
+        document.getElementById('measurementInterval').value = config.device.measurementInterval;
+        
+        document.getElementById('devEUI').value = config.lorawan.devEUI;
+        document.getElementById('joinEUI').value = config.lorawan.joinEUI;
+        document.getElementById('appKey').value = config.lorawan.appKey;
+        document.getElementById('nwkKey').value = config.lorawan.nwkKey;
+    }
+
+    function updateConfigPreview() {
+        configPreview.value = JSON.stringify(deviceConfig, null, 2);
+    }
+
+    function saveConfiguration() {
+        updateConfigFromUI();
+        
+        // Save to localStorage
+        localStorage.setItem('tsfLoraConfig', JSON.stringify(deviceConfig));
+        
+        // Also download as file
+        const configJson = JSON.stringify(deviceConfig, null, 2);
+        const blob = new Blob([configJson], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create download link
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Generate filename with timestamp
+        const now = new Date();
+        const timestamp = now.toISOString().slice(0, 19).replace(/[:.]/g, '-');
+        a.download = `tsf_lora_config_${timestamp}.json`;
+        
+        // Trigger download
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        configStatus.textContent = 'Saved to browser storage and downloaded';
+        configStatus.style.color = 'var(--success-color)';
+        console.log('Configuration saved to localStorage and downloaded');
+    }
+
+    function loadConfiguration(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const config = JSON.parse(e.target.result);
+                deviceConfig = config;
+                updateUIFromConfig(config);
+                updateConfigPreview();
+                configStatus.textContent = 'Loaded from file';
+                configStatus.style.color = 'var(--success-color)';
+            } catch (error) {
+                alert('Invalid configuration file');
+                configStatus.textContent = 'Load failed';
+                configStatus.style.color = 'var(--danger-color)';
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function exportConfiguration() {
+        updateConfigFromUI();
+        const configJson = JSON.stringify(deviceConfig, null, 2);
+        const blob = new Blob([configJson], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'tsf_lora_config.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        configStatus.textContent = 'Exported successfully';
+        configStatus.style.color = 'var(--success-color)';
+    }
+
+    // Load saved configuration on page load
+    window.addEventListener('load', () => {
+        const savedConfig = localStorage.getItem('tsfLoraConfig');
+        if (savedConfig) {
+            try {
+                deviceConfig = JSON.parse(savedConfig);
+                updateUIFromConfig(deviceConfig);
+                updateConfigPreview();
+                configStatus.textContent = 'Loaded from browser storage';
+                configStatus.style.color = 'var(--success-color)';
+            } catch (error) {
+                console.error('Error loading saved configuration:', error);
+            }
+        } else {
+            updateConfigPreview();
+        }
+    });
+
+    function onDisconnected(event) {
+        console.log('Device Disconnected:', event.target.device.name);
+        bleStateContainer.innerHTML = "Device disconnected";
+        bleStateContainer.style.color = "#d13a30";
+        connectedCharacteristics = {};
+        connectedCountContainer.innerHTML = "0";
+    }
+
+    function writeOnCharacteristic(value) {
+        if (bleServer && bleServer.connected) {
+            if (connectedCharacteristics.write) {
+                const data = new Uint8Array([value]);
+                connectedCharacteristics.write.writeValue(data)
+                .then(() => {
+                    latestValueSent.innerHTML = value;
+                    console.log("Value written to characteristic:", value);
+                })
+                .catch(error => {
+                    console.error("Error writing to characteristic: ", error);
+                });
+            } else {
+                console.error("Write characteristic not found");
+            }
+        } else {
+            console.error("Bluetooth is not connected. Cannot write to characteristic.");
+            window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!");
+        }
+    }
+
+    function disconnectDevice() {
+        console.log("Disconnect Device.");
+        if (bleServer && bleServer.connected) {
+            // Stop all notifications
+            for (const characteristic of Object.values(connectedCharacteristics)) {
+                if (characteristic.properties?.notify) {
+                    characteristic.stopNotifications().catch(e => console.log('Stop notification error:', e));
+                }
+            }
+            
+            bleServer.disconnect().then(() => {
+                console.log("Device Disconnected");
+                bleStateContainer.innerHTML = "Device Disconnected";
+                bleStateContainer.style.color = "#d13a30";
+                connectedCharacteristics = {};
+                connectedCountContainer.innerHTML = "0";
+            }).catch(error => {
+                console.log("An error occurred:", error);
+            });
+        } else {
+            console.error("Bluetooth is not connected.");
+            window.alert("Bluetooth is not connected.");
+        }
+    }
+
+    function getDateTime() {
+        var currentdate = new Date();
+        var day = ("00" + currentdate.getDate()).slice(-2);
+        var month = ("00" + (currentdate.getMonth() + 1)).slice(-2);
+        var year = currentdate.getFullYear();
+        var hours = ("00" + currentdate.getHours()).slice(-2);
+        var minutes = ("00" + currentdate.getMinutes()).slice(-2);
+        var seconds = ("00" + currentdate.getSeconds()).slice(-2);
+
+        var datetime = day + "/" + month + "/" + year + " at " + hours + ":" + minutes + ":" + seconds;
+        return datetime;
+    }
+</script>
+</html>
