@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>TSF LoRaWAN ULP Gateway</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,7 +20,7 @@
                     <button id="connectBleButton" class="connectButton"> Connect to BLE Device</button>
                     <button id="disconnectBleButton" class="disconnectButton"> Disconnect BLE Device</button>
                 </p>
-                <p class="gray-label">BLE state: <strong><span id="bleState" style="color:#d13a30;">Disconnected</span></strong></p>
+                <p class="gray-label">BLE state: <strong><span id="bleState" class="status-disconnected">Disconnected</span></strong></p>
             </div>
         </div>
     </div>
@@ -30,6 +30,8 @@
         <div class="tab-nav">
             <button class="tab-button active" data-tab="dashboard">Dashboard</button>
             <button class="tab-button" data-tab="settings">Settings</button>
+            <button class="tab-button" data-tab="ota">OTA</button>
+            <button class="tab-button" data-tab="serial">Serial Flash</button>
         </div>
     </div>
 
@@ -118,13 +120,23 @@
                 </div>
             </div>
 
+            <!-- Analog Inputs (V2) -->
+            <div class="card-grid">
+                <div class="card">
+                    <h2>Analog Inputs (V2)</h2>
+                    <p class="reading">4–20mA (V420): <span id="v420">--</span></p>
+                    <p class="reading">0–12V: <span id="v012">--</span></p>
+                </div>
+            </div>
+
             <!-- Control & Status -->
             <div class="card-grid">
                 <div class="card">
                     <!-- <h2>Control GPIO 2</h2> -->
                     <!-- <button id="onButton" class="onButton">ON</button>
                     <button id="offButton" class="offButton">OFF</button> -->
-                    <button id="refreshButton" class="subButton">Refresh All</button>
+                    <button id="readAllButton" class="subButton" title="Read all characteristics without triggering acquisition">Read Current Values</button>
+                    <button id="refreshButton" class="subButton" title="Trigger device acquisition and then read all">Acquire New Measurements</button>
                     <p class="gray-label">Last value sent: <span id="valueSent"></span></p>
                 </div>
 
@@ -137,6 +149,87 @@
         </div>
     </div>
 
+    <!-- Serial Flash Tab Content -->
+    <div class="tab-content" id="serial">
+        <div class="content">
+            <div class="card-grid">
+                <div class="card">
+                    <h2>Flash via WebSerial</h2>
+                    <p class="gray-label">Use your browser to flash firmware over USB using WebSerial.</p>
+                    <ul>
+                        <li>Connect the ESP32-S3 to your computer via USB.</li>
+                        <li>Put device in download mode if required (EN/BOOT buttons).</li>
+                        <li>Click Install and select the serial port.</li>
+                    </ul>
+                    <div style="margin-top:12px;">
+                        <esp-web-install-button manifest="./serial/manifest.json"></esp-web-install-button>
+                    </div>
+                    <p class="gray-label" style="margin-top:12px;">Tip: Replace files in the manifest with your built binaries.</p>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- OTA Tab Content -->
+    <div class="tab-content" id="ota">
+        <div class="content">
+            <div class="card-grid hidden">
+                <div class="card hidden">
+                    <h2>Device Information</h2>
+                    <div class="row">
+                        <label>Hardware Revision</label>
+                        <input id="hwRev" type="text" readonly title="Hardware Revision" placeholder="Connect to read" />
+                    </div>
+                    <div class="row">
+                        <label>Software Revision</label>
+                        <input id="swRev" type="text" readonly title="Software Revision" placeholder="Connect to read" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <h2>Firmware</h2>
+                    <div class="row hidden">
+                        <label>Service UUID</label>
+                        <input id="svcUuid" type="text" value="3fa85f64-5800-4562-b3fc-2c963f66afa6" title="Service UUID" placeholder="Service UUID" />
+                    </div>
+                    <div class="row hidden">
+                        <label>Control Char UUID</label>
+                        <input id="ctrlUuid" type="text" value="3fa85f64-58b0-4562-b3fc-2c963f66afa6" title="Control characteristic UUID" placeholder="Control characteristic UUID" />
+                    </div>
+                    <div class="row hidden">
+                        <label>Data Char UUID</label>
+                        <input id="dataUuid" type="text" value="3fa85f64-58b1-4562-b3fc-2c963f66afa6" title="Data characteristic UUID" placeholder="Data characteristic UUID" />
+                    </div>
+                    <div class="row">
+                        <label>Choose .bin file</label>
+                        <input id="fileInput" type="file" accept=".bin" title="Firmware .bin" />
+                    </div>
+                    <div class="row">
+                        <label>Chunk Size (bytes)</label>
+                        <input id="chunkSize" type="number" value="180" min="20" max="1024" title="Chunk size" />
+                    </div>
+                    <div class="row">
+                        <label>Computed CRC32</label>
+                        <input id="crcOut" type="text" readonly title="CRC32" placeholder="Select file to compute" />
+                    </div>
+                    <div class="row buttons">
+                        <button id="btnStart" disabled>Start OTA</button>
+                        <button id="btnAbort" disabled>Abort</button>
+                    </div>
+                    <progress id="progress" value="0" max="100"></progress>
+                    <div class="row">
+                        <label>Transferred</label>
+                        <input id="xferOut" type="text" readonly placeholder="0 / 0 bytes" />
+                    </div>
+                    <div class="status" id="status">Idle</div>
+                    <div class="log" id="log"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Settings Tab Content -->
     <div class="tab-content" id="settings">
         <div class="content">
@@ -148,12 +241,12 @@
                         <input type="text" id="deviceName" value="TSFLora" class="settings-input">
                     </div>
                     <!-- <div class="settings-group">
-                        <label for="measurementInterval">Measurement Interval (s):</label>
+                        <label for="measurementInterval">Measurement Interval (min):</label>
                         <input type="number" id="measurementInterval" value="60" min="1" max="3600" class="settings-input">
                     </div> -->
                     <div class="button-group">
                         <button id="readSettingsBtn" class="subButton">Read from Device</button>
-                        <button id="writeSettingsBtn" class="onButton">Write to Device</button>
+                        <button id="writeSettingsBtn" class="onButton" disabled>Write to Device</button>
                     </div>
                 </div>
 
@@ -180,9 +273,102 @@
                         <small>Current: <span id="currentNwkKey">--</span></small>
                     </div>
                     <div class="settings-group">
-                        <label for="measurementInterval">Measurement Interval (s):</label>
+                        <label for="measurementInterval">Measurement Interval (min):</label>
                         <input type="number" id="measurementInterval" value="60" min="1" max="3600" class="settings-input">
                         <small>Current: <span id="currentInterval">--</span></small>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Module & Sensor Settings</h2>
+                    <div class="settings-group">
+                        <label for="vwModuleType">VW Module Type:</label>
+                        <input type="number" id="vwModuleType" min="0" max="255" class="settings-input">
+                    </div>
+                    <div class="settings-group">
+                        <label>VW Channels Enabled:</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" id="vw1enabled"> VW1</label>
+                            <label><input type="checkbox" id="vw2enabled"> VW2</label>
+                            <label><input type="checkbox" id="vw3enabled"> VW3</label>
+                            <label><input type="checkbox" id="vw4enabled"> VW4</label>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <label for="numReadings">Number of Readings:</label>
+                        <input type="number" id="numReadings" min="1" max="10" class="settings-input">
+                    </div>
+                    <div class="settings-group">
+                        <label><input type="checkbox" id="bmpenabled"> BMP Enabled</label>
+                    </div>
+                    <div class="settings-group">
+                        <label><input type="checkbox" id="mpuenabled"> MPU Enabled</label>
+                    </div>
+                    <div class="settings-group">
+                        <label><input type="checkbox" id="tiltenabled"> Tilt Detection Enabled</label>
+                    </div>
+                    <div class="settings-group">
+                        <label><input type="checkbox" id="chargerenabled"> Charger Enabled</label>
+                    </div>
+                    <div class="settings-group">
+                        <label><input type="checkbox" id="chargingenabled"> Charging Enabled</label>
+                    </div>
+                    <div class="settings-group">
+                        <label for="batteryType">Battery Type:</label>
+                        <select id="batteryType" class="settings-input">
+                            <option value="0">Unknown</option>
+                            <option value="1">LiPo</option>
+                            <option value="2">LiFePO4</option>
+                            <option value="4">LiSOCl2</option>
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label for="batterySize">Battery Size (mAh):</label>
+                        <input type="number" id="batterySize" min="0" max="65535" class="settings-input">
+                    </div>
+                    <div class="settings-group">
+                        <label><input type="checkbox" id="battadcenabled"> Battery A2D Enabled</label>
+                    </div>
+                    <div class="settings-group">
+                        <label><input type="checkbox" id="v420enabled"> 4–20mA Enabled</label>
+                    </div>
+                    <div class="settings-group">
+                        <label for="v420numreadings">4–20mA Num Readings:</label>
+                        <input type="number" id="v420numreadings" min="1" max="10" class="settings-input">
+                    </div>
+                    <div class="settings-group">
+                        <label><input type="checkbox" id="v012venabled"> 0–12V Enabled</label>
+                    </div>
+                    <div class="settings-group">
+                        <label for="v012vnumreadings">0–12V Num Readings:</label>
+                        <input type="number" id="v012vnumreadings" min="1" max="10" class="settings-input">
+                    </div>
+                    <div class="settings-group">
+                        <label><input type="checkbox" id="modbusmodenabled"> RS485/Modbus Enabled</label>
+                    </div>
+                    <div class="settings-group">
+                        <label for="modbusBaud">Modbus Baudrate:</label>
+                        <input type="number" id="modbusBaud" min="1200" max="1000000" step="1" class="settings-input" value="9600">
+                    </div>
+                    <div class="settings-group">
+                        <label for="modbusRegAddress">Modbus Register Address:</label>
+                        <input type="number" id="modbusRegAddress" min="0" max="65535" class="settings-input">
+                    </div>
+                    <div class="settings-group">
+                        <label for="modbusRegType">Modbus Register Type:</label>
+                        <select id="modbusRegType" class="settings-input">
+                            <option value="0">Holding</option>
+                            <option value="1">Input</option>
+                            <option value="2">Coil</option>
+                            <option value="3">Discrete</option>
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label><input type="checkbox" id="straingaugeenabled"> Strain Gauge Enabled</label>
+                    </div>
+                    <div class="settings-group">
+                        <label for="straingaugenumreadings">Strain Gauge Num Readings:</label>
+                        <input type="number" id="straingaugenumreadings" min="1" max="10" class="settings-input">
                     </div>
                 </div>
             </div>
@@ -209,7 +395,7 @@
                         <button id="loadConfigBtn" class="subButton">Load Config</button>
                         <!-- <button id="exportConfigBtn" class="offButton">Export JSON</button> -->
                     </div>
-                    <input type="file" id="configFileInput" accept=".json" style="display: none;">
+                    <input type="file" id="configFileInput" accept=".json" class="hidden-input" title="Load configuration JSON">
                     <div class="settings-group">
                         <label for="configPreview">Configuration Preview:</label>
                         <textarea id="configPreview" class="config-textarea" readonly></textarea>
@@ -221,7 +407,13 @@
     </div>
 </body>
 
+<!-- OTA integrated via main script -->
+
+<!-- ESP Web Tools: WebSerial flashing component -->
+<script type="module" src="https://unpkg.com/esp-web-tools@^9/dist/web/install-button.js?module"></script>
+
 <script>
+    
     // Helper function to convert UUID from byte array to string format
     function uuidFromBytes(bytes) {
         const hex = bytes.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -252,6 +444,7 @@
     const disconnectButton = document.getElementById('disconnectBleButton');
     const onButton = document.getElementById('onButton');
     const offButton = document.getElementById('offButton');
+    const readAllButton = document.getElementById('readAllButton');
     const refreshButton = document.getElementById('refreshButton');
     const latestValueSent = document.getElementById('valueSent');
     const bleStateContainer = document.getElementById('bleState');
@@ -290,12 +483,13 @@
     // Define BLE Device Specs
     var deviceName = 'TSFLora';
     var bleService = reverseUuidBytes('3fa85f64-5700-4562-b3fc-2c963f66afa6');
+    const otaServiceUuid = reverseUuidBytes('3fa85f64-5800-4562-b3fc-2c963f66afa6');
 
     // Define all characteristic UUIDs matching your ble.cpp file
     const characteristics = {
         // Control characteristics
         read: uuidFromBytes([0x29,0x08,0x56,0xcb, 0xae,0x88, 0x48,0x46, 0x98,0x8d, 0x56,0x9d,0x28,0xfd,0x1d,0x55]),
-        write: uuidFromBytes([0x3f,0xa8,0x5f,0x64, 0x57,0x17, 0x45,0x62, 0xb3,0xfc, 0x2c,0x96,0x3f,0x66,0xaf,0xa6]),
+        write: reverseUuidBytes('3fa85f64-5717-4562-b3fc-2c963f66afa6'),
         
         // Power characteristics
         supplyVoltage:  reverseUuidBytes('3fa85f64-5718-4562-b3fc-2c963f66afa6'),
@@ -337,19 +531,51 @@
 
         // Load cell
         loadcell: reverseUuidBytes('3fa85f64-5760-4562-b3fc-2c963f66afa6'),
+        // V2 analog inputs
+        v420: reverseUuidBytes('3fa85f64-5770-4562-b3fc-2c963f66afa6'),
+        v012: reverseUuidBytes('3fa85f64-5771-4562-b3fc-2c963f66afa6'),
 
         // Settings characteristics - matching your ble.cpp UUIDs
         devEUI: reverseUuidBytes('3fa85f64-5890-4562-b3fc-2c963f66afa6'),
         joinEUI: reverseUuidBytes('3fa85f64-5891-4562-b3fc-2c963f66afa6'),
         appKey: reverseUuidBytes('3fa85f64-5892-4562-b3fc-2c963f66afa6'),
         nwkKey: reverseUuidBytes('3fa85f64-5893-4562-b3fc-2c963f66afa6'),
-        interval: reverseUuidBytes('3fa85f64-5894-4562-b3fc-2c963f66afa6')
+        interval: reverseUuidBytes('3fa85f64-5894-4562-b3fc-2c963f66afa6'),
+        // Extended settings
+        vwmoduletype:   reverseUuidBytes('3fa85f64-5896-4562-b3fc-2c963f66afa6'),
+        vw1enabled:     reverseUuidBytes('3fa85f64-5897-4562-b3fc-2c963f66afa6'),
+        vw2enabled:     reverseUuidBytes('3fa85f64-5898-4562-b3fc-2c963f66afa6'),
+        vw3enabled:     reverseUuidBytes('3fa85f64-5899-4562-b3fc-2c963f66afa6'),
+        vw4enabled:     reverseUuidBytes('3fa85f64-589a-4562-b3fc-2c963f66afa6'),
+        numreadings:    reverseUuidBytes('3fa85f64-589b-4562-b3fc-2c963f66afa6'),
+        bmpenabled:     reverseUuidBytes('3fa85f64-589c-4562-b3fc-2c963f66afa6'),
+        mpuenabled:     reverseUuidBytes('3fa85f64-589d-4562-b3fc-2c963f66afa6'),
+        tiltenabled:    reverseUuidBytes('3fa85f64-589e-4562-b3fc-2c963f66afa6'),
+        chargerenabled: reverseUuidBytes('3fa85f64-589f-4562-b3fc-2c963f66afa6'),
+        chargingenabled:reverseUuidBytes('3fa85f64-58a0-4562-b3fc-2c963f66afa6'),
+        batterytype:    reverseUuidBytes('3fa85f64-58a1-4562-b3fc-2c963f66afa6'),
+        batterysize:    reverseUuidBytes('3fa85f64-58a2-4562-b3fc-2c963f66afa6'),
+        battadcenabled: reverseUuidBytes('3fa85f64-58a3-4562-b3fc-2c963f66afa6'),
+        v420enabled:    reverseUuidBytes('3fa85f64-58a4-4562-b3fc-2c963f66afa6'),
+        v420numreadings:reverseUuidBytes('3fa85f64-58a5-4562-b3fc-2c963f66afa6'),
+        v012venabled:   reverseUuidBytes('3fa85f64-58a6-4562-b3fc-2c963f66afa6'),
+        v012vnumreadings:reverseUuidBytes('3fa85f64-58a7-4562-b3fc-2c963f66afa6'),
+        modbusmodenabled: reverseUuidBytes('3fa85f64-58a8-4562-b3fc-2c963f66afa6'),
+        modbusmodbaudrate: reverseUuidBytes('3fa85f64-58a9-4562-b3fc-2c963f66afa6'),
+        modbusmodregaddress: reverseUuidBytes('3fa85f64-58aa-4562-b3fc-2c963f66afa6'),
+        modbusmodregtype: reverseUuidBytes('3fa85f64-58ab-4562-b3fc-2c963f66afa6'),
+        straingaugeenabled: reverseUuidBytes('3fa85f64-58ac-4562-b3fc-2c963f66afa6'),
+        straingaugenumreadings: reverseUuidBytes('3fa85f64-58ad-4562-b3fc-2c963f66afa6')
     };
 
     // Global Variables to Handle Bluetooth
     var bleServer;
+    var bleDevice;
+    var connWatchdog;
     var bleServiceFound;
     var connectedCharacteristics = {};
+    // Track enabled state for dashboard readings
+    var settingsEnabled = { v420: true, v012: true, strain: true };
 
     // Settings Configuration Object
     let deviceConfig = {
@@ -375,9 +601,41 @@
     disconnectButton.addEventListener('click', disconnectDevice);
     // onButton.addEventListener('click', () => writeOnCharacteristic(1));
     // offButton.addEventListener('click', () => writeOnCharacteristic(0));
-    refreshButton.addEventListener('click', readAllCharacteristics);
+    readAllButton.addEventListener('click', () => {
+        // Read all current characteristics without triggering acquisition
+        readAllCharacteristics();
+    });
+
+    refreshButton.addEventListener('click', async () => {
+        try {
+            // Request fresh readings on device
+            if (connectedCharacteristics.write) {
+                await connectedCharacteristics.write.writeValue(new Uint8Array([0x10]));
+            }
+        } catch (e) {
+            console.log('Refresh command write failed:', e);
+        }
+        // Give the device a short moment to sample
+        setTimeout(readAllCharacteristics, 200);
+    });
 
     // Settings Event Listeners
+    // Gating for Write button: require successful settings read and non-zero DevEUI
+    let settingsReadOnce = false;
+    function getCurrentDevEuiHex() {
+        const txt = (document.getElementById('currentDevEUI')?.textContent || '').trim();
+        return txt.replace(/\s+/g, '');
+    }
+    function isAllZeroEui(hex) {
+        return !!hex && hex.length === 16 && /^0{16}$/i.test(hex);
+    }
+    function updateWriteButtonEnabled() {
+        const connected = !!(bleServer && bleServer.connected);
+        const eui = getCurrentDevEuiHex();
+        const validEui = !!eui && eui.length === 16 && !isAllZeroEui(eui);
+        writeSettingsBtn.disabled = !(connected && settingsReadOnce && validEui);
+    }
+
     readSettingsBtn.addEventListener('click', readSettingsFromDevice);
     writeSettingsBtn.addEventListener('click', writeSettingsToDevice);
     // refreshSettingsBtn.addEventListener('click', readSettingsFromDevice);
@@ -414,18 +672,34 @@
         console.log('Initializing Bluetooth...');
         navigator.bluetooth.requestDevice({
             filters: [{name: deviceName}],
-            optionalServices: [bleService]
+            optionalServices: [bleService, otaServiceUuid, 0x180A]
         })
         .then(device => {
             console.log('Device Selected:', device.name);
-            bleStateContainer.innerHTML = 'Connected to device ' + device.name;
-            bleStateContainer.style.color = "#24af37";
-            device.addEventListener('gattservicedisconnected', onDisconnected);
+            // Show connecting state until GATT connect completes
+            bleStateContainer.innerHTML = 'Connecting to device ' + device.name;
+            bleStateContainer.style.color = "";
+            // Keep reference and listen for proper disconnect event
+            bleDevice = device;
+            device.addEventListener('gattserverdisconnected', onDisconnected);
             return device.gatt.connect();
         })
         .then(gattServer => {
             bleServer = gattServer;
             console.log("Connected to GATT Server");
+            // Mark connected in UI
+            if (bleDevice) {
+                bleStateContainer.innerHTML = 'Connected to device ' + bleDevice.name;
+                bleStateContainer.style.color = "#24af37";
+            }
+            // Start connection watchdog to catch unexpected disconnects
+            if (connWatchdog) clearInterval(connWatchdog);
+            connWatchdog = setInterval(() => {
+                if (!bleServer || !bleServer.connected) {
+                    console.log('Watchdog: BLE server disconnected');
+                    updateDisconnectedUI();
+                }
+            }, 1000);
             return bleServer.getPrimaryService(bleService);
         })
         .then(service => {
@@ -473,9 +747,23 @@
     async function readAllCharacteristics() {
         for (const [name, characteristic] of Object.entries(connectedCharacteristics)) {
             // Skip settings characteristics in general read
-            if (['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval'].includes(name)) {
+            if (['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval', 'vwmoduletype', 'vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'numreadings', 'bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','batterytype','batterysize','battadcenabled','v012venabled','v012vnumreadings','modbusmodenabled','modbusmodbaudrate','modbusmodregaddress','modbusmodregtype','straingaugeenabled','straingaugenumreadings'].includes(name)) {
                 continue;
             }
+            // Skip disabled analog readings per settings
+            if (name === 'v420' && settingsEnabled.v420 === false) { continue; }
+            if (name === 'v012' && settingsEnabled.v012 === false) { continue; }
+            // Skip strain gauge (load cell) when disabled
+            if (name === 'loadcell' && settingsEnabled.strain === false) { continue; }
+            // Skip VW channels if disabled
+            if ((name === 'tempvw1' || name === 'freqvw1') && settingsEnabled.vw1 === false) { continue; }
+            if ((name === 'tempvw2' || name === 'freqvw2') && settingsEnabled.vw2 === false) { continue; }
+            if ((name === 'tempvw3' || name === 'freqvw3') && settingsEnabled.vw3 === false) { continue; }
+            if ((name === 'tempvw4' || name === 'freqvw4') && settingsEnabled.vw4 === false) { continue; }
+            // Skip BMP-driven environmental signals if BMP disabled
+            if ((name === 'temperature' || name === 'pressure' || name === 'altitude') && settingsEnabled.bmp === false) { continue; }
+            // Skip MPU-driven signals if MPU disabled
+            if ((name === 'ax' || name === 'ay' || name === 'az' || name === 'gx' || name === 'gy' || name === 'gz' || name === 'pitch' || name === 'roll' || name === 'yaw') && settingsEnabled.mpu === false) { continue; }
             
             try {
                 const value = await characteristic.readValue();
@@ -491,15 +779,28 @@
         const element = document.getElementById(characteristicName);
         if (!element) return;
 
+        // Normalize DataView and length handling to avoid losing offsets
+        const dv = (value instanceof DataView)
+            ? value
+            : new DataView(value.buffer, value.byteOffset || 0, value.byteLength || value.length || 0);
+        const len = dv.byteLength;
+
+        // Special-case Battery % as a single byte (0-100)
+        if (characteristicName === 'batteryPercent' && len >= 1) {
+            const bp = dv.getUint8(0);
+            element.textContent = bp.toString();
+            console.log('batteryPercent:', bp);
+            return;
+        }
+
         let displayValue;
-        
         // Parse the value based on the characteristic type
-        if (value.byteLength === 4) {
+        if (len === 4) {
             // Float (4 bytes)
-            displayValue = new DataView(value.buffer).getFloat32(0, true).toFixed(4);
-        } else if (value.byteLength === 2) {
+            displayValue = dv.getFloat32(0, true).toFixed(4);
+        } else if (len === 2) {
             // 16-bit integer
-            const intValue = new DataView(value.buffer).getUint16(0, true);
+            const intValue = dv.getUint16(0, true);
             // Apply scaling based on characteristic
             if (characteristicName.includes('Voltage') || characteristicName.includes('voltage') || characteristicName === 'vbat') {
                 displayValue = (intValue / 1000).toFixed(2); // Voltage in mV to V
@@ -516,25 +817,74 @@
             } else {
                 displayValue = intValue.toString();
             }
-        } else if (value.byteLength === 1) {
-            // 8-bit value (like battery percentage)
-            displayValue = new DataView(value.buffer).getUint8(0).toString();
+        } else if (len === 1) {
+            // 8-bit value
+            displayValue = dv.getUint8(0).toString();
         } else {
             // Try to decode as string
             try {
-                displayValue = new TextDecoder().decode(value);
+                const u8 = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+                displayValue = new TextDecoder().decode(u8);
             } catch {
                 displayValue = "Unknown format";
             }
         }
         
-        element.innerHTML = displayValue;
+        element.textContent = displayValue;
         console.log(`${characteristicName}: ${displayValue}`);
+    }
+
+    function applyReadingEnabledState() {
+        const v420El = document.getElementById('v420');
+        const v012El = document.getElementById('v012');
+        if (v420El) {
+            if (settingsEnabled.v420 === false) { v420El.textContent = 'Disabled'; } else if (v420El.textContent === 'Disabled') { v420El.textContent = '--'; }
+        }
+        if (v012El) {
+            if (settingsEnabled.v012 === false) { v012El.textContent = 'Disabled'; } else if (v012El.textContent === 'Disabled') { v012El.textContent = '--'; }
+        }
+
+        // Strain gauge (load cell)
+        const lcEl = document.getElementById('loadcell');
+        if (lcEl) {
+            if (settingsEnabled.strain === false) { lcEl.textContent = 'Disabled'; } else if (lcEl.textContent === 'Disabled') { lcEl.textContent = '--'; }
+        }
+
+        // VW channels
+        const vwMap = [
+            {en: 'vw1', temp: 'tempvw1', freq: 'freqvw1'},
+            {en: 'vw2', temp: 'tempvw2', freq: 'freqvw2'},
+            {en: 'vw3', temp: 'tempvw3', freq: 'freqvw3'},
+            {en: 'vw4', temp: 'tempvw4', freq: 'freqvw4'}
+        ];
+        vwMap.forEach((ch) => {
+            const en = settingsEnabled[ch.en];
+            const tEl = document.getElementById(ch.temp);
+            const fEl = document.getElementById(ch.freq);
+            if (tEl) { if (en === false) { tEl.textContent = 'Disabled'; } else if (tEl.textContent === 'Disabled') { tEl.textContent = '--'; } }
+            if (fEl) { if (en === false) { fEl.textContent = 'Disabled'; } else if (fEl.textContent === 'Disabled') { fEl.textContent = '--'; } }
+        });
+
+        // Environmental (BMP)
+        const env = ['temperature','pressure','altitude'];
+        env.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) { if (settingsEnabled.bmp === false) { el.textContent = 'Disabled'; } else if (el.textContent === 'Disabled') { el.textContent = '--'; } }
+        });
+
+        // MPU (Accel/Gyro/Orientation)
+        const accel = ['ax','ay','az'];
+        const gyro = ['gx','gy','gz'];
+        const orient = ['pitch','roll','yaw'];
+        [...accel, ...gyro, ...orient].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) { if (settingsEnabled.mpu === false) { el.textContent = 'Disabled'; } else if (el.textContent === 'Disabled') { el.textContent = '--'; } }
+        });
     }
 
     // Settings Functions
     async function readSettingsFromDevice() {
-        const settingsCharacteristics = ['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval'];
+        const settingsCharacteristics = ['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval', 'vwmoduletype', 'vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'numreadings', 'bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','batterytype','batterysize','battadcenabled','v420enabled','v420numreadings','v012venabled','v012vnumreadings','modbusmodenabled','modbusmodbaudrate','modbusmodregaddress','modbusmodregtype','straingaugeenabled','straingaugenumreadings'];
         
         for (const charName of settingsCharacteristics) {
             if (!connectedCharacteristics[charName]) {
@@ -553,6 +903,9 @@
         updateConfigFromCurrentSettings();
         configStatus.textContent = 'Settings read from device';
         configStatus.style.color = 'var(--success-color)';
+        // Mark that a read occurred and update gating
+        settingsReadOnce = true;
+        updateWriteButtonEnabled();
     }
 
     function handleSettingsCharacteristic(characteristicName, value) {
@@ -567,6 +920,11 @@
                     displayValue = bytesToHex(reversedBytes);
                     document.getElementById(`read${characteristicName.charAt(0).toUpperCase() + characteristicName.slice(1)}`).innerHTML = displayValue;
                     document.getElementById(`current${characteristicName.charAt(0).toUpperCase() + characteristicName.slice(1)}`).innerHTML = displayValue;
+                    // Populate text input fields with current values
+                    document.getElementById(characteristicName).value = displayValue;
+                    if (characteristicName === 'devEUI') {
+                        updateWriteButtonEnabled();
+                    }
                 }
                 break;
                 
@@ -577,6 +935,8 @@
                     displayValue = bytesToHex(new Uint8Array(value.buffer));
                     document.getElementById(`read${characteristicName.charAt(0).toUpperCase() + characteristicName.slice(1)}`).innerHTML = displayValue;
                     document.getElementById(`current${characteristicName.charAt(0).toUpperCase() + characteristicName.slice(1)}`).innerHTML = displayValue;
+                    // Populate text input fields with current values
+                    document.getElementById(characteristicName).value = displayValue;
                 }
                 break;
                 
@@ -587,6 +947,100 @@
                     document.getElementById('readInterval').innerHTML = displayValue;
                     document.getElementById('measurementInterval').value = displayValue;
                     document.getElementById(`current${characteristicName.charAt(0).toUpperCase() + characteristicName.slice(1)}`).innerHTML = displayValue;
+                }
+                break;
+            case 'vwmoduletype':
+                if (value.byteLength === 1) {
+                    displayValue = new DataView(value.buffer).getUint8(0);
+                    document.getElementById('vwModuleType').value = displayValue;
+                }
+                break;
+            case 'vw1enabled':
+            case 'vw2enabled':
+            case 'vw3enabled':
+            case 'vw4enabled':
+                if (value.byteLength === 1) {
+                    const enabled = new DataView(value.buffer).getUint8(0) ? true : false;
+                    document.getElementById(characteristicName).checked = enabled;
+                    if (characteristicName === 'vw1enabled') { settingsEnabled.vw1 = enabled; applyReadingEnabledState(); }
+                    if (characteristicName === 'vw2enabled') { settingsEnabled.vw2 = enabled; applyReadingEnabledState(); }
+                    if (characteristicName === 'vw3enabled') { settingsEnabled.vw3 = enabled; applyReadingEnabledState(); }
+                    if (characteristicName === 'vw4enabled') { settingsEnabled.vw4 = enabled; applyReadingEnabledState(); }
+                }
+                break;
+            case 'numreadings':
+                if (value.byteLength === 2) {
+                    displayValue = new DataView(value.buffer).getUint16(0, true);
+                    document.getElementById('numReadings').value = displayValue;
+                }
+                break;
+            case 'bmpenabled':
+            case 'mpuenabled':
+            case 'tiltenabled':
+            case 'chargerenabled':
+            case 'chargingenabled':
+            case 'battadcenabled':
+            case 'v420enabled':
+            case 'v012venabled':
+            case 'modbusmodenabled':
+            case 'straingaugeenabled':
+                if (value.byteLength === 1) {
+                    const enabled = new DataView(value.buffer).getUint8(0) ? true : false;
+                    document.getElementById(characteristicName).checked = enabled;
+                    if (characteristicName === 'v420enabled') { settingsEnabled.v420 = enabled; applyReadingEnabledState(); }
+                    if (characteristicName === 'v012venabled') { settingsEnabled.v012 = enabled; applyReadingEnabledState(); }
+                    if (characteristicName === 'bmpenabled') { settingsEnabled.bmp = enabled; applyReadingEnabledState(); }
+                    if (characteristicName === 'mpuenabled') { settingsEnabled.mpu = enabled; applyReadingEnabledState(); }
+                    if (characteristicName === 'tiltenabled') { settingsEnabled.tilt = enabled; applyReadingEnabledState(); }
+                    if (characteristicName === 'straingaugeenabled') { settingsEnabled.strain = enabled; applyReadingEnabledState(); }
+                }
+                break;
+            case 'batterytype':
+                if (value.byteLength === 1) {
+                    const bt = new DataView(value.buffer).getUint8(0);
+                    document.getElementById('batteryType').value = String(bt);
+                }
+                break;
+            case 'batterysize':
+                if (value.byteLength === 2) {
+                    const bs = new DataView(value.buffer).getUint16(0, true);
+                    document.getElementById('batterySize').value = bs;
+                }
+                break;
+            case 'v012vnumreadings':
+                if (value.byteLength === 2) {
+                    const nr = new DataView(value.buffer).getUint16(0, true);
+                    document.getElementById('v012vnumreadings').value = nr;
+                }
+                break;
+            case 'v420numreadings':
+                if (value.byteLength === 2) {
+                    const nr = new DataView(value.buffer).getUint16(0, true);
+                    document.getElementById('v420numreadings').value = nr;
+                }
+                break;
+            case 'straingaugenumreadings':
+                if (value.byteLength === 2) {
+                    const nr = new DataView(value.buffer).getUint16(0, true);
+                    document.getElementById('straingaugenumreadings').value = nr;
+                }
+                break;
+            case 'modbusmodbaudrate':
+                if (value.byteLength === 4) {
+                    const br = new DataView(value.buffer).getUint32(0, true);
+                    document.getElementById('modbusBaud').value = br;
+                }
+                break;
+            case 'modbusmodregaddress':
+                if (value.byteLength === 2) {
+                    const ra = new DataView(value.buffer).getUint16(0, true);
+                    document.getElementById('modbusRegAddress').value = ra;
+                }
+                break;
+            case 'modbusmodregtype':
+                if (value.byteLength === 1) {
+                    const rt = new DataView(value.buffer).getUint8(0);
+                    document.getElementById('modbusRegType').value = String(rt);
                 }
                 break;
         }
@@ -643,6 +1097,87 @@
                 new DataView(intervalBytes.buffer).setUint16(0, interval, true);
                 await connectedCharacteristics.interval.writeValue(intervalBytes);
                 console.log('Interval written:', interval);
+            }
+
+            // Extended settings writes
+            if (connectedCharacteristics.vwmoduletype) {
+                const v = parseInt(document.getElementById('vwModuleType').value) || 0;
+                await connectedCharacteristics.vwmoduletype.writeValue(new Uint8Array([v & 0xff]));
+                console.log('vwModuleType written:', v);
+            }
+            for (const name of ['vw1enabled','vw2enabled','vw3enabled','vw4enabled']) {
+                if (connectedCharacteristics[name]) {
+                    const checked = document.getElementById(name).checked ? 1 : 0;
+                    await connectedCharacteristics[name].writeValue(new Uint8Array([checked]));
+                    console.log(name, 'written:', checked);
+                }
+            }
+            if (connectedCharacteristics.numreadings) {
+                const nr = parseInt(document.getElementById('numReadings').value) || 0;
+                const b = new Uint8Array(2);
+                new DataView(b.buffer).setUint16(0, nr, true);
+                await connectedCharacteristics.numreadings.writeValue(b);
+                console.log('numreadings written:', nr);
+            }
+            // Other toggles
+            for (const name of ['bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','battadcenabled','v420enabled','v012venabled','modbusmodenabled','straingaugeenabled']) {
+                if (connectedCharacteristics[name]) {
+                    const checked = document.getElementById(name).checked ? 1 : 0;
+                    await connectedCharacteristics[name].writeValue(new Uint8Array([checked]));
+                    console.log(name, 'written:', checked);
+                }
+            }
+            if (connectedCharacteristics.v420numreadings) {
+                const vr = parseInt(document.getElementById('v420numreadings').value) || 0;
+                const b = new Uint8Array(2);
+                new DataView(b.buffer).setUint16(0, vr, true);
+                await connectedCharacteristics.v420numreadings.writeValue(b);
+                console.log('v420numreadings written:', vr);
+            }
+            if (connectedCharacteristics.batterytype) {
+                const bt = parseInt(document.getElementById('batteryType').value) || 0;
+                await connectedCharacteristics.batterytype.writeValue(new Uint8Array([bt & 0xff]));
+                console.log('batterytype written:', bt);
+            }
+            if (connectedCharacteristics.batterysize) {
+                const bs = parseInt(document.getElementById('batterySize').value) || 0;
+                const b = new Uint8Array(2);
+                new DataView(b.buffer).setUint16(0, bs, true);
+                await connectedCharacteristics.batterysize.writeValue(b);
+                console.log('batterysize written:', bs);
+            }
+            if (connectedCharacteristics.v012vnumreadings) {
+                const vr = parseInt(document.getElementById('v012vnumreadings').value) || 0;
+                const b = new Uint8Array(2);
+                new DataView(b.buffer).setUint16(0, vr, true);
+                await connectedCharacteristics.v012vnumreadings.writeValue(b);
+                console.log('v012vnumreadings written:', vr);
+            }
+            if (connectedCharacteristics.straingaugenumreadings) {
+                const sr = parseInt(document.getElementById('straingaugenumreadings').value) || 0;
+                const b = new Uint8Array(2);
+                new DataView(b.buffer).setUint16(0, sr, true);
+                await connectedCharacteristics.straingaugenumreadings.writeValue(b);
+                console.log('straingaugenumreadings written:', sr);
+            }
+            if (connectedCharacteristics.modbusmodbaudrate) {
+                const br = parseInt(document.getElementById('modbusBaud').value) || 9600;
+                const b = new Uint8Array(4);
+                new DataView(b.buffer).setUint32(0, br, true);
+                await connectedCharacteristics.modbusmodbaudrate.writeValue(b);
+                console.log('modbusmodbaudrate written:', br);
+            }
+            if (connectedCharacteristics.modbusmodregaddress) {
+                const ra = parseInt(document.getElementById('modbusRegAddress').value) || 0;
+                const b = new Uint8Array(2);
+                new DataView(b.buffer).setUint16(0, ra, true);
+                await connectedCharacteristics.modbusmodregaddress.writeValue(b);
+                console.log('modbusmodregaddress written:', ra);
+            }
+            if (connectedCharacteristics.modbusmodregtype) {
+                const rt = parseInt(document.getElementById('modbusRegType').value) || 0;
+                await connectedCharacteristics.modbusmodregtype.writeValue(new Uint8Array([rt & 0xff]));
+                console.log('modbusmodregtype written:', rt);
             }
 
             alert('Settings successfully written to device');
@@ -783,12 +1318,31 @@
         }
     });
 
-    function onDisconnected(event) {
-        console.log('Device Disconnected:', event.target.device.name);
-        bleStateContainer.innerHTML = "Device disconnected";
+    function updateDisconnectedUI() {
+        // Clear watchdog and connection refs
+        if (connWatchdog) { clearInterval(connWatchdog); connWatchdog = null; }
+        bleServer = null;
+        // Update UI
+        bleStateContainer.innerHTML = "Device Disconnected";
         bleStateContainer.style.color = "#d13a30";
         connectedCharacteristics = {};
         connectedCountContainer.innerHTML = "0";
+        // Reset Write gating
+        try { settingsReadOnce = false; updateWriteButtonEnabled(); } catch {}
+        // Reset OTA UI
+        try {
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('btnAbort').disabled = true;
+            document.getElementById('progress').value = 0;
+            document.getElementById('xferOut').value = '0 / 0 bytes';
+            const statusEl = document.getElementById('status');
+            if (statusEl) statusEl.textContent = 'Idle';
+        } catch {}
+    }
+
+    function onDisconnected(event) {
+        console.log('Device Disconnected:', (event?.target?.device?.name) || 'unknown');
+        updateDisconnectedUI();
     }
 
     function writeOnCharacteristic(value) {
@@ -821,16 +1375,15 @@
                     characteristic.stopNotifications().catch(e => console.log('Stop notification error:', e));
                 }
             }
-            
-            bleServer.disconnect().then(() => {
-                console.log("Device Disconnected");
-                bleStateContainer.innerHTML = "Device Disconnected";
-                bleStateContainer.style.color = "#d13a30";
-                connectedCharacteristics = {};
-                connectedCountContainer.innerHTML = "0";
-            }).catch(error => {
-                console.log("An error occurred:", error);
-            });
+            // Web Bluetooth disconnect() is synchronous (no promise)
+            try {
+                bleServer.disconnect();
+            } catch (e) {
+                console.log('disconnect() threw:', e);
+            }
+            // Update UI immediately; onDisconnected will also run
+            console.log("Device Disconnected");
+            updateDisconnectedUI();
         } else {
             console.error("Bluetooth is not connected.");
             window.alert("Bluetooth is not connected.");
@@ -849,5 +1402,137 @@
         var datetime = day + "/" + month + "/" + year + " at " + hours + ":" + minutes + ":" + seconds;
         return datetime;
     }
+
+    // OTA integration using existing BLE connection
+    const otaEls = {
+        svcUuid: () => document.getElementById('svcUuid'),
+        ctrlUuid: () => document.getElementById('ctrlUuid'),
+        dataUuid: () => document.getElementById('dataUuid'),
+        btnStart: () => document.getElementById('btnStart'),
+        btnAbort: () => document.getElementById('btnAbort'),
+        progress: () => document.getElementById('progress'),
+        status: () => document.getElementById('status'),
+        log: () => document.getElementById('log'),
+        hwRev: () => document.getElementById('hwRev'),
+        swRev: () => document.getElementById('swRev'),
+        crcOut: () => document.getElementById('crcOut'),
+        xferOut: () => document.getElementById('xferOut'),
+        fileInput: () => document.getElementById('fileInput'),
+        chunkSize: () => document.getElementById('chunkSize')
+    };
+
+    const otaState = { service: null, ctrlChar: null, dataChar: null, totalSize: 0, sentSize: 0 };
+
+    function otaSetStatus(text) { const el = otaEls.status(); if (el) el.textContent = text; }
+    function otaLog(msg) { const el = otaEls.log(); if (!el) return; const p = document.createElement('div'); p.textContent = msg; el.prepend(p); }
+    function otaSetConnectedUI(connected) {
+        const s = otaEls.btnStart(); const a = otaEls.btnAbort();
+        if (s) s.disabled = !connected || !(otaEls.fileInput()?.files?.[0]);
+        if (a) a.disabled = !connected;
+    }
+    function otaUpdateProgress(val) { const p = otaEls.progress(); if (p) p.value = val; }
+    function otaSetXfer(received, expected) { const x = otaEls.xferOut(); if (x) x.value = `${received} / ${expected} bytes`; }
+
+    function crc32(buf) {
+        let crc = 0xFFFFFFFF >>> 0; const u8 = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+        for (let i = 0; i < u8.length; i++) { let c = (crc ^ u8[i]) & 0xFF; for (let k = 0; k < 8; k++) { const mask = -(c & 1); c = (c >>> 1) ^ (0xEDB88320 & mask); } crc = (crc >>> 8) ^ c; }
+        return (crc ^ 0xFFFFFFFF) >>> 0;
+    }
+    function parseStatusView(dv) {
+        const state = dv.getUint8(0); const received = dv.getUint32(1, true); const expected = dv.getUint32(5, true);
+        const totalLen = dv.byteLength || dv.buffer.byteLength; const textLen = Math.max(0, totalLen - 9);
+        const textBytes = textLen ? new Uint8Array(dv.buffer, dv.byteOffset + 9, textLen) : new Uint8Array();
+        const text = textLen ? new TextDecoder().decode(textBytes) : '';
+        return { state, received, expected, text };
+    }
+    function onCtrlNotify(e) {
+        const val = e.target.value; const dv = val instanceof DataView ? val : new DataView(val.buffer);
+        const st = parseStatusView(dv); if (st.expected) otaState.totalSize = st.expected; otaState.sentSize = st.received;
+        const pct = otaState.totalSize ? Math.round((otaState.sentSize / otaState.totalSize) * 100) : 0;
+        otaUpdateProgress(pct); otaSetXfer(otaState.sentSize, otaState.totalSize);
+        otaLog(`Status: state=${st.state} received=${st.received}/${st.expected} ${st.text || ''}`);
+        if (st.state === 2) { otaSetStatus('Completed'); otaLog('OTA completed. Device may reboot shortly.'); }
+        else if (st.state === 3) { otaSetStatus('Error'); otaLog('OTA error: ' + (st.text || '')); }
+    }
+
+    async function initOtaIfNeeded() {
+        if (!(bleServer && bleServer.connected)) { otaSetConnectedUI(false); return; }
+        try {
+            // Reverse UUID byte order to match device UUID layout
+            const svcId = reverseUuidBytes(otaEls.svcUuid().value);
+            otaState.service = await bleServer.getPrimaryService(svcId);
+            otaState.ctrlChar = await otaState.service.getCharacteristic(reverseUuidBytes(otaEls.ctrlUuid().value));
+            otaState.dataChar = await otaState.service.getCharacteristic(reverseUuidBytes(otaEls.dataUuid().value));
+            await otaState.ctrlChar.startNotifications();
+            otaState.ctrlChar.addEventListener('characteristicvaluechanged', onCtrlNotify);
+            otaLog('Notifications enabled on OTA control characteristic');
+            // Initial status read
+            try {
+                const rv = await otaState.ctrlChar.readValue();
+                const st0 = parseStatusView(new DataView(rv.buffer));
+                otaState.totalSize = st0.expected || 0; otaState.sentSize = st0.received || 0;
+                otaUpdateProgress(otaState.totalSize ? Math.round((otaState.sentSize / otaState.totalSize) * 100) : 0);
+                otaSetXfer(otaState.sentSize, otaState.totalSize);
+                if (st0.state === 1) otaSetStatus('OTA in progress'); else if (st0.state === 2) otaSetStatus('Completed'); else if (st0.state === 3) otaSetStatus('Error'); else otaSetStatus('Idle');
+                otaLog(`Initial status: state=${st0.state} received=${st0.received}/${st0.expected}`);
+            } catch (e) { otaLog('Initial status read failed: ' + e.message); }
+            // Read DIS
+            try {
+                const dis = await bleServer.getPrimaryService(0x180A);
+                const hwc = await dis.getCharacteristic(0x2A27); const swc = await dis.getCharacteristic(0x2A28);
+                const hwv = await hwc.readValue(); const swv = await swc.readValue();
+                otaEls.hwRev().value = new TextDecoder().decode(new Uint8Array(hwv.buffer));
+                otaEls.swRev().value = new TextDecoder().decode(new Uint8Array(swv.buffer));
+                otaLog('Device Info read: HW=' + otaEls.hwRev().value + ' SW=' + otaEls.swRev().value);
+            } catch (e2) { otaLog('DIS read failed: ' + (e2.message || '')); }
+            otaSetConnectedUI(true); otaSetStatus('Connected');
+        } catch (e) {
+            otaSetStatus('Error: ' + e.message); otaLog('OTA init error: ' + (e.stack || e.message)); otaSetConnectedUI(false);
+        }
+    }
+
+    async function startOTA() {
+        if (!(bleServer && bleServer.connected)) { alert('Connect BLE device first'); return; }
+        if (!otaState.service || !otaState.ctrlChar || !otaState.dataChar) { await initOtaIfNeeded(); }
+        const file = otaEls.fileInput().files[0]; if (!file) return;
+        const ab = await file.arrayBuffer(); const all = new Uint8Array(ab);
+        otaState.totalSize = all.length; const crc = crc32(all);
+        otaEls.crcOut().value = '0x' + crc.toString(16).padStart(8, '0'); otaState.sentSize = 0; otaUpdateProgress(0); otaSetStatus('Starting OTA…');
+        const startBuf = new Uint8Array(9); startBuf[0] = 0x01; const dv = new DataView(startBuf.buffer); dv.setUint32(1, otaState.totalSize, true); dv.setUint32(5, crc, true);
+        await otaState.ctrlChar.writeValue(startBuf);
+        const chunk = parseInt(otaEls.chunkSize().value, 10) || 180;
+        for (let off = 0; off < all.length; off += chunk) {
+            const slice = all.subarray(off, Math.min(off + chunk, all.length));
+            await otaState.dataChar.writeValueWithoutResponse(slice);
+            otaState.sentSize += slice.length; const pct = Math.round((otaState.sentSize / otaState.totalSize) * 100);
+            otaUpdateProgress(pct); otaSetXfer(otaState.sentSize, otaState.totalSize);
+        }
+        await otaState.ctrlChar.writeValue(Uint8Array.of(0x02)); otaSetStatus('Finalizing…');
+    }
+
+    async function abortOTA() {
+        try { if (otaState.ctrlChar) { await otaState.ctrlChar.writeValue(Uint8Array.of(0x03)); otaSetStatus('Aborted'); } }
+        catch (e) { otaLog('Abort error: ' + e.message); }
+    }
+
+    // Bind OTA events
+    (function bindOta() {
+        const s = otaEls.btnStart(); const a = otaEls.btnAbort(); const f = otaEls.fileInput();
+        if (s) s.addEventListener('click', startOTA);
+        if (a) a.addEventListener('click', abortOTA);
+        if (f) f.addEventListener('change', () => {
+            const file = otaEls.fileInput().files[0]; otaEls.btnStart().disabled = !(bleServer && bleServer.connected) || !file;
+            if (file) {
+                file.arrayBuffer().then(ab => { const crc = crc32(new Uint8Array(ab)); otaEls.crcOut().value = '0x' + crc.toString(16).padStart(8, '0'); otaLog('Computed CRC32 for selected file: ' + otaEls.crcOut().value); otaState.totalSize = ab.byteLength; otaState.sentSize = 0; otaUpdateProgress(0); otaSetXfer(0, otaState.totalSize); }).catch(() => { otaEls.crcOut().value = ''; otaLog('Failed to compute CRC32'); otaSetXfer(0, 0); });
+            } else { otaEls.crcOut().value = ''; otaSetXfer(0, 0); }
+        });
+    })();
+
+    // Initialize OTA when switching to OTA tab
+    const prevSwitchTab = switchTab;
+    switchTab = function(tabName) {
+        prevSwitchTab(tabName);
+        if (tabName === 'ota') { initOtaIfNeeded(); }
+    };
 </script>
 </html>
