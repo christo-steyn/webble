@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="topnav">
-        <h1>TSF LoRaWAN ULP Gateway</h1>
+        <h1>TSF LoRaWAN ULP Gateway V1.2</h1>
     </div>
 
     <!-- BLE Connection Controls - Always Visible -->
@@ -237,7 +237,7 @@
                 <div class="card">
                     <h2>Device Configuration</h2>
                     <div class="settings-group">
-                        <label for="deviceName">Device Name:</label>
+                        <label for="deviceName">Device Name Prefix:</label>
                         <input type="text" id="deviceName" value="TSFLora" class="settings-input">
                     </div>
                     <!-- <div class="settings-group">
@@ -256,6 +256,7 @@
                         <label for="devEUI">Device EUI:</label>
                         <input type="text" id="devEUI" placeholder="0000000000000000" maxlength="16" class="settings-input eui-input">
                         <small>Current: <span id="currentDevEUI">--</span></small>
+                        <div id="devEUIQRCode" style="margin-top: 10px; text-align: center;"></div>
                     </div>
                     <div class="settings-group">
                         <label for="joinEUI">Join EUI:</label>
@@ -412,6 +413,9 @@
 <!-- ESP Web Tools: WebSerial flashing component -->
 <script type="module" src="https://unpkg.com/esp-web-tools@^9/dist/web/install-button.js?module"></script>
 
+<!-- QR Code Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <script>
     
     // Helper function to convert UUID from byte array to string format
@@ -481,7 +485,7 @@
     }
 
     // Define BLE Device Specs
-    var deviceName = 'TSFLora';
+    var deviceName = 'TSFLora'; // Device name prefix for filtering (matches TSFLora_XXXX...)
     var bleService = reverseUuidBytes('3fa85f64-5700-4562-b3fc-2c963f66afa6');
     const otaServiceUuid = reverseUuidBytes('3fa85f64-5800-4562-b3fc-2c963f66afa6');
 
@@ -594,6 +598,8 @@
     // Event Listeners
     connectButton.addEventListener('click', (event) => {
         if (isWebBluetoothEnabled()) {
+            // Update deviceName from input field before connecting
+            deviceName = document.getElementById('deviceName').value || 'TSFLora';
             connectToDevice();
         }
     });
@@ -671,7 +677,7 @@
     function connectToDevice() {
         console.log('Initializing Bluetooth...');
         navigator.bluetooth.requestDevice({
-            filters: [{name: deviceName}],
+            filters: [{namePrefix: deviceName}],
             optionalServices: [bleService, otaServiceUuid, 0x180A]
         })
         .then(device => {
@@ -924,6 +930,7 @@
                     document.getElementById(characteristicName).value = displayValue;
                     if (characteristicName === 'devEUI') {
                         updateWriteButtonEnabled();
+                        generateDevEUIQRCode(displayValue);
                     }
                 }
                 break;
@@ -1298,6 +1305,32 @@
         
         configStatus.textContent = 'Exported successfully';
         configStatus.style.color = 'var(--success-color)';
+    }
+
+    // Generate QR code for Device EUI
+    let devEUIQRCodeInstance = null;
+    function generateDevEUIQRCode(devEUI) {
+        const qrContainer = document.getElementById('devEUIQRCode');
+        if (!qrContainer) return;
+        
+        // Clear previous QR code
+        qrContainer.innerHTML = '';
+        
+        // Only generate if we have a valid Device EUI (not '--' or empty)
+        if (devEUI && devEUI !== '--' && devEUI.length === 16) {
+            try {
+                devEUIQRCodeInstance = new QRCode(qrContainer, {
+                    text: devEUI,
+                    width: 128,
+                    height: 128,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            } catch (error) {
+                console.error('Error generating QR code:', error);
+            }
+        }
     }
 
     // Load saved configuration on page load
