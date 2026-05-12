@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>TSF LoRaWAN ULP Gateway V1.3</title>
+    <title>TSF LoRaWAN ULP Gateway V1.31</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="favicon.ico">
     <link rel="stylesheet" type="text/css" href="style.css">
@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="topnav">
-        <h1>TSF LoRaWAN ULP Gateway V1.3</h1>
+        <h1>TSF LoRaWAN ULP Gateway V1.31</h1>
     </div>
 
     <!-- BLE Connection Controls - Always Visible -->
@@ -19,6 +19,10 @@
                 <p>
                     <button id="connectBleButton" class="connectButton"> Connect to BLE Device</button>
                     <button id="disconnectBleButton" class="disconnectButton"> Disconnect BLE Device</button>
+                </p>
+                <p id="bluefyMessage" class="gray-label" style="display:none; color: #ff9800; margin-top: 10px;">
+                    Web Bluetooth is not supported on iOS Safari. 
+                    <a href="#" id="openBluefyLink" style="color: #2196F3; text-decoration: underline;">Open in Bluefy Browser</a>
                 </p>
                 <p class="gray-label">BLE state: <strong><span id="bleState" class="status-disconnected">Disconnected</span></strong></p>
             </div>
@@ -137,6 +141,7 @@
                     <button id="offButton" class="offButton">OFF</button> -->
                     <button id="readAllButton" class="subButton" title="Read all characteristics without triggering acquisition">Read Current Values</button>
                     <button id="refreshButton" class="subButton" title="Trigger device acquisition and then read all">Acquire New Measurements</button>
+                    <button id="batteryMonitorButton" class="subButton" title="Precharge supercap during battery replacement (device will monitor charging)">Battery Replacement Supercap Precharge</button>
                     <p class="gray-label">Last value sent: <span id="valueSent"></span></p>
                 </div>
 
@@ -450,6 +455,7 @@
     const offButton = document.getElementById('offButton');
     const readAllButton = document.getElementById('readAllButton');
     const refreshButton = document.getElementById('refreshButton');
+    const batteryMonitorButton = document.getElementById('batteryMonitorButton');
     const latestValueSent = document.getElementById('valueSent');
     const bleStateContainer = document.getElementById('bleState');
     const timestampContainer = document.getElementById('timestamp');
@@ -604,6 +610,18 @@
         }
     });
 
+    // Setup Bluefy link for iOS devices
+    const openBluefyLink = document.getElementById('openBluefyLink');
+    if (openBluefyLink) {
+        openBluefyLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            const currentUrl = window.location.href;
+            const bluefyUrl = `bluefy://open?url=${encodeURIComponent(currentUrl)}`;
+            console.log('Opening in Bluefy:', bluefyUrl);
+            window.location.href = bluefyUrl;
+        });
+    }
+
     disconnectButton.addEventListener('click', disconnectDevice);
     // onButton.addEventListener('click', () => writeOnCharacteristic(1));
     // offButton.addEventListener('click', () => writeOnCharacteristic(0));
@@ -623,6 +641,32 @@
         }
         // Give the device a short moment to sample
         setTimeout(readAllCharacteristics, 200);
+    });
+
+    batteryMonitorButton.addEventListener('click', async () => {
+        try {
+            // Start supercap precharge for battery replacement
+            if (connectedCharacteristics.write) {
+                const confirmed = confirm(
+                    'BATTERY REPLACEMENT SUPERCAP PRECHARGE\n\n' +
+                    'This mode precharges the supercapacitor during battery replacement.\n\n' +
+                    'Device will flash GREEN LED while charging.\n' +
+                    'LED turns SOLID GREEN when supercap reaches 3.5V (ready).\n\n' +
+                    'You must RESET the device after battery replacement to return to normal operation.\n\n' +
+                    'Start precharge?'
+                );
+                if (confirmed) {
+                    await connectedCharacteristics.write.writeValue(new Uint8Array([0x20]));
+                    console.log('Supercap precharge command sent (0x20)');
+                    alert('Supercap precharge started. LED will flash GREEN until 3.5V reached, then turn solid.');
+                }
+            } else {
+                alert('BLE write characteristic not available. Please reconnect.');
+            }
+        } catch (e) {
+            console.log('Supercap precharge command failed:', e);
+            alert('Failed to send precharge command: ' + e.message);
+        }
     });
 
     // Settings Event Listeners
@@ -664,10 +708,49 @@
         return revHex.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5').toLowerCase();
     }
 
+    function isIOS() {
+        return [
+            'iPad Simulator',
+            'iPhone Simulator',
+            'iPod Simulator',
+            'iPad',
+            'iPhone',
+            'iPod'
+        ].includes(navigator.platform)
+        // iPad on iOS 13 detection
+        || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+    }
+
     function isWebBluetoothEnabled() {
         if (!navigator.bluetooth) {
             console.log('Web Bluetooth API is not available in this browser!');
-            bleStateContainer.innerHTML = "Web Bluetooth API is not available in this browser/device!";
+            console.log('Current URL:', window.location.href);
+            console.log('Is secure context:', window.isSecureContext);
+            
+            // Check if we're on iOS and show Bluefy option
+            if (isIOS()) {
+                bleStateContainer.innerHTML = "Web Bluetooth not available on iOS";
+                // Show the Bluefy message
+                const bluefyMessage = document.getElementById('bluefyMessage');
+                if (bluefyMessage) {
+                    bluefyMessage.style.display = 'block';
+                }
+            } else {
+                // Check if it's a secure context issue
+                if (!window.isSecureContext && !window.location.hostname.match(/^(localhost|127\.0\.0\.1)$/)) {
+                    bleStateContainer.innerHTML = "Web Bluetooth requires HTTPS or localhost!";
+                    const bluefyMessage = document.getElementById('bluefyMessage');
+                    if (bluefyMessage) {
+                        bluefyMessage.innerHTML = 'Web Bluetooth requires a secure connection (HTTPS). ' +
+                            '<br><strong>Solutions:</strong><br>' +
+                            '• Use <code>https://</code> instead of <code>http://</code><br>' +
+                            '• Or access via <a href="http://localhost:' + window.location.port + '/" style="color: #2196F3;">http://localhost:' + window.location.port + '/</a>';
+                        bluefyMessage.style.display = 'block';
+                    }
+                } else {
+                    bleStateContainer.innerHTML = "Web Bluetooth API is not available in this browser/device!";
+                }
+            }
             return false;
         }
         console.log('Web Bluetooth API supported in this browser.');
@@ -676,10 +759,22 @@
 
     function connectToDevice() {
         console.log('Initializing Bluetooth...');
-        navigator.bluetooth.requestDevice({
-            filters: [{namePrefix: deviceName}],
-            optionalServices: [bleService, otaServiceUuid, 0x180A]
-        })
+        
+        // Bluefy requires services in filters, not just optionalServices
+        // Use standard UUID format for better compatibility
+        const filterOptions = {
+            filters: [
+                {
+                    namePrefix: deviceName,
+                    services: [bleService]
+                }
+            ],
+            optionalServices: [otaServiceUuid, '0000180a-0000-1000-8000-00805f9b34fb'] // Device Information Service
+        };
+        
+        console.log('Requesting device with filters:', filterOptions);
+        
+        navigator.bluetooth.requestDevice(filterOptions)
         .then(device => {
             console.log('Device Selected:', device.name);
             // Show connecting state until GATT connect completes
@@ -1348,6 +1443,28 @@
             }
         } else {
             updateConfigPreview();
+        }
+        
+        // Check for Web Bluetooth availability and show appropriate messages
+        if (!navigator.bluetooth) {
+            if (isIOS()) {
+                const bluefyMessage = document.getElementById('bluefyMessage');
+                if (bluefyMessage) {
+                    bluefyMessage.style.display = 'block';
+                }
+                bleStateContainer.innerHTML = 'Web Bluetooth not available on iOS';
+            } else if (!window.isSecureContext && !window.location.hostname.match(/^(localhost|127\.0\.0\.1)$/)) {
+                // Show HTTPS requirement message
+                bleStateContainer.innerHTML = 'Web Bluetooth requires HTTPS or localhost!';
+                const bluefyMessage = document.getElementById('bluefyMessage');
+                if (bluefyMessage) {
+                    bluefyMessage.innerHTML = 'Web Bluetooth requires a secure connection (HTTPS). ' +
+                        '<br><strong>Solutions:</strong><br>' +
+                        '• Use <code>https://</code> instead of <code>http://</code><br>' +
+                        '• Or access via <a href="http://localhost:' + window.location.port + '/" style="color: #2196F3;">http://localhost:' + window.location.port + '/</a>';
+                    bluefyMessage.style.display = 'block';
+                }
+            }
         }
     });
 
