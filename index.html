@@ -759,17 +759,14 @@
 
     function connectToDevice() {
         console.log('Initializing Bluetooth...');
+        console.log('Looking for devices with name prefix:', deviceName);
+        console.log('Make sure device is powered on and advertising');
         
-        // Bluefy requires services in filters, not just optionalServices
-        // Use standard UUID format for better compatibility
+        // Try with namePrefix only first (works for most devices)
+        // If device advertises the service, it will still match
         const filterOptions = {
-            filters: [
-                {
-                    namePrefix: deviceName,
-                    services: [bleService]
-                }
-            ],
-            optionalServices: [otaServiceUuid, '0000180a-0000-1000-8000-00805f9b34fb'] // Device Information Service
+            filters: [{ namePrefix: deviceName }],
+            optionalServices: [bleService, otaServiceUuid, '0000180a-0000-1000-8000-00805f9b34fb'] // Device Information Service
         };
         
         console.log('Requesting device with filters:', filterOptions);
@@ -816,7 +813,7 @@
         })
         .catch(error => {
             console.log('Error: ', error);
-            bleStateContainer.innerHTML = "Connection failed";
+            bleStateContainer.innerHTML = "Connection failed: " + error.message;
             bleStateContainer.style.color = "#d13a30";
         });
     }
