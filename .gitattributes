@@ -1,0 +1,11 @@
+# Git LFS configuration for large firmware files
+# Uncomment the line below if you want to use Git LFS for .bin files
+
+# *.bin filter=lfs diff=lfs merge=lfs -text
+
+# To enable Git LFS:
+# 1. Install Git LFS: https://git-lfs.github.com/
+# 2. Run: git lfs install
+# 3. Uncomment the line above
+# 4. Run: git lfs track "*.bin"
+# 5. Commit .gitattributes: git add .gitattributes && git commit -m "Enable Git LFS"

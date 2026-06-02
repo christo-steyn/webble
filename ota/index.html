@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TSF LoRaWAN ULP • BLE OTA</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>BLE OTA Updater</h1>
+    <p>Update firmware over BLE using the device's OTA service.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Connection</h2>
+      <div class="row">
+        <label>Service UUID</label>
+        <input id="svcUuid" type="text" value="a6af663f-962c-fcb3-6245-0058645fa83f" title="Service UUID" placeholder="Service UUID" />
+      </div>
+      <div class="row">
+        <label>Control Char UUID</label>
+        <input id="ctrlUuid" type="text" value="a6af663f-962c-fcb3-6245-b058645fa83f" title="Control characteristic UUID" placeholder="Control characteristic UUID" />
+      </div>
+      <div class="row">
+        <label>Data Char UUID</label>
+        <input id="dataUuid" type="text" value="a6af663f-962c-fcb3-6245-b158645fa83f" title="Data characteristic UUID" placeholder="Data characteristic UUID" />
+      </div>
+      <div class="row buttons">
+        <button id="btnConnect">Connect</button>
+        <button id="btnDisconnect" disabled>Disconnect</button>
+      </div>
+      <div class="status" id="status">Idle</div>
+    </section>
+
+    <section class="card">
+      <h2>Device Information</h2>
+      <div class="row">
+        <label>Hardware Revision</label>
+        <input id="hwRev" type="text" readonly title="Hardware Revision" placeholder="Connect to read" />
+      </div>
+      <div class="row">
+        <label>Software Revision</label>
+        <input id="swRev" type="text" readonly title="Software Revision" placeholder="Connect to read" />
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Firmware</h2>
+      <div class="row">
+        <label>Choose .bin file</label>
+        <input id="fileInput" type="file" accept=".bin" title="Firmware .bin" />
+      </div>
+      <div class="row">
+        <label>Chunk Size (bytes)</label>
+        <input id="chunkSize" type="number" value="180" min="20" max="512" title="Chunk size" />
+      </div>
+      <div class="row">
+        <label>Transfer Speed</label>
+        <label style="display: flex; align-items: center; gap: 8px;">
+          <input id="fastMode" type="checkbox" title="Fast mode (less stable)" />
+          <span>Fast Mode (less stable, may timeout on some devices)</span>
+        </label>
+      </div>
+      <div class="row">
+        <label>Computed CRC32</label>
+        <input id="crcOut" type="text" readonly title="CRC32" placeholder="Select file to compute" />
+      </div>
+      <div class="row buttons">
+        <button id="btnStart" disabled>Start OTA</button>
+        <button id="btnAbort" disabled>Abort</button>
+      </div>
+      <progress id="progress" value="0" max="100"></progress>
+      <div class="row">
+        <label>Transferred</label>
+        <input id="xferOut" type="text" readonly placeholder="0 / 0 bytes" />
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+  </main>
+
+  <footer>
+    <small>Service/characteristic UUIDs can be edited if needed.</small>
+  </footer>
+
+  <script src="ota.js"></script>
+</body>
+</html>
