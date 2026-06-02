@@ -111,9 +111,16 @@ h3 { font-size: 1.25rem; }
 }
 
 .ble-buttons button {
+    padding: 0.6rem 1rem;
+    min-width: 140px;
+}
+
+.ble-buttons button .button-main {
     font-size: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    min-width: auto;
+}
+
+.ble-buttons button .button-subtitle {
+    font-size: 0.6rem;
 }
 
 .ble-state-label {
@@ -150,8 +157,16 @@ h3 { font-size: 1.25rem; }
     }
     
     .ble-buttons button {
+        padding: 0.75rem 1.25rem;
+        min-width: 160px;
+    }
+    
+    .ble-buttons button .button-main {
         font-size: 0.875rem;
-        padding: 0.625rem 1rem;
+    }
+    
+    .ble-buttons button .button-subtitle {
+        font-size: 0.7rem;
     }
     
     .ble-state-label {
@@ -266,12 +281,26 @@ button {
     cursor: pointer;
     transition: var(--transition);
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.25rem;
     text-transform: uppercase;
     letter-spacing: 0.025em;
     min-width: 120px;
+}
+
+.button-main {
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.button-subtitle {
+    font-size: 0.65rem;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    opacity: 0.9;
 }
 
 .connectButton {

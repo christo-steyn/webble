@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>TSF LoRaWAN ULP Gateway V1.31</title>
+    <title>TSF LoRaWAN ULP Gateway V1.32</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="favicon.ico">
     <link rel="stylesheet" type="text/css" href="style.css">
@@ -10,17 +10,19 @@
 <body>
     <div class="topnav">
         <div class="topnav-content">
-            <h1>TSF LoRaWAN ULP Gateway V1.31</h1>
+            <h1>TSF LoRaWAN ULP Gateway V1.32</h1>
             <div class="ble-controls">
                 <div class="ble-buttons">
-                    <button id="connectBleButton" class="connectButton"> Connect to BLE Device</button>
-                    <button id="disconnectBleButton" class="disconnectButton"> Disconnect BLE Device</button>
+                    <button id="bleToggleButton" class="disconnectButton">
+                        <span class="button-main">Disconnected</span>
+                        <span class="button-subtitle">Press to connect</span>
+                    </button>
                 </div>
                 <p id="bluefyMessage" class="gray-label" style="display:none; color: #ff9800; margin-top: 10px;">
                     Web Bluetooth is not supported on iOS Safari. 
                     <a href="#" id="openBluefyLink" style="color: #2196F3; text-decoration: underline;">Open in Bluefy Browser</a>
                 </p>
-                <p class="ble-state-label">BLE state: <strong><span id="bleState" class="status-disconnected">Disconnected</span></strong></p>
+                <p class="ble-state-label"><span id="bleState"></span></p>
             </div>
         </div>
     </div>
@@ -475,8 +477,7 @@
     }
 
     // DOM Elements
-    const connectButton = document.getElementById('connectBleButton');
-    const disconnectButton = document.getElementById('disconnectBleButton');
+    const bleToggleButton = document.getElementById('bleToggleButton');
     const onButton = document.getElementById('onButton');
     const offButton = document.getElementById('offButton');
     const readAllButton = document.getElementById('readAllButton');
@@ -628,11 +629,17 @@
     };
 
     // Event Listeners
-    connectButton.addEventListener('click', (event) => {
-        if (isWebBluetoothEnabled()) {
-            // Update deviceName from input field before connecting
-            deviceName = document.getElementById('deviceName').value || 'TSFLora';
-            connectToDevice();
+    bleToggleButton.addEventListener('click', (event) => {
+        if (bleServer && bleServer.connected) {
+            // Currently connected, so disconnect
+            disconnectDevice();
+        } else {
+            // Not connected, so connect
+            if (isWebBluetoothEnabled()) {
+                // Update deviceName from input field before connecting
+                deviceName = document.getElementById('deviceName').value || 'TSFLora';
+                connectToDevice();
+            }
         }
     });
 
@@ -647,8 +654,6 @@
             window.location.href = bluefyUrl;
         });
     }
-
-    disconnectButton.addEventListener('click', disconnectDevice);
     // onButton.addEventListener('click', () => writeOnCharacteristic(1));
     // offButton.addEventListener('click', () => writeOnCharacteristic(0));
     readAllButton.addEventListener('click', () => {
@@ -816,6 +821,9 @@
                 bleStateContainer.innerHTML = 'Connected to device ' + bleDevice.name;
                 bleStateContainer.style.color = "#24af37";
             }
+            // Update button to connected state (green)
+            bleToggleButton.innerHTML = '<span class="button-main">Connected</span><span class="button-subtitle">Press to disconnect</span>';
+            bleToggleButton.className = 'connectButton';
             // Start connection watchdog to catch unexpected disconnects
             if (connWatchdog) clearInterval(connWatchdog);
             connWatchdog = setInterval(() => {
@@ -841,6 +849,9 @@
             console.log('Error: ', error);
             bleStateContainer.innerHTML = "Connection failed: " + error.message;
             bleStateContainer.style.color = "#d13a30";
+            // Reset button to disconnected state (red) on error
+            bleToggleButton.innerHTML = '<span class="button-main">Disconnected</span><span class="button-subtitle">Press to connect</span>';
+            bleToggleButton.className = 'disconnectButton';
         });
     }
 
@@ -1500,6 +1511,9 @@
         bleStateContainer.style.color = "#d13a30";
         connectedCharacteristics = {};
         connectedCountContainer.innerHTML = "0";
+        // Update button to disconnected state (red)
+        bleToggleButton.innerHTML = '<span class="button-main">Disconnected</span><span class="button-subtitle">Press to connect</span>';
+        bleToggleButton.className = 'disconnectButton';
         // Reset Write gating
         try { settingsReadOnce = false; updateWriteButtonEnabled(); } catch {}
         // Reset OTA UI
@@ -1511,6 +1525,60 @@
             const statusEl = document.getElementById('status');
             if (statusEl) statusEl.textContent = 'Idle';
         } catch {}
+        // Reset all sensor values to "--"
+        const sensorIds = [
+            'supplyVoltage', 'batteryVoltage', 'vbat', 'batteryPercent',
+            'temperature', 'pressure', 'altitude',
+            'tempvw1', 'freqvw1', 'tempvw2', 'freqvw2', 'tempvw3', 'freqvw3', 'tempvw4', 'freqvw4',
+            'ax', 'ay', 'az', 'gx', 'gy', 'gz',
+            'pitch', 'roll', 'yaw', 'loadcell',
+            'v420', 'v012', 'timestamp',
+            'currentDevEUI', 'currentJoinEUI', 'currentAppKey', 'currentNwkKey', 'currentInterval',
+            'valueSent',
+            'readDevEUI', 'readJoinEUI', 'readAppKey', 'readNwkKey', 'readInterval'
+        ];
+        sensorIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '--';
+        });
+        // Clear QR code
+        const qrCodeEl = document.getElementById('devEUIQRCode');
+        if (qrCodeEl) qrCodeEl.innerHTML = '';
+        // Clear settings input fields
+        const textInputs = ['devEUI', 'joinEUI', 'appKey', 'nwkKey'];
+        textInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        // Reset device name to default
+        const deviceNameEl = document.getElementById('deviceName');
+        if (deviceNameEl) deviceNameEl.value = 'TSFLora';
+        const numberInputs = ['vwModuleType', 'numReadings', 'batterySize', 'v420numreadings', 'v012vnumreadings', 'modbusRegAddress', 'straingaugenumreadings'];
+        numberInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        // Reset defaults for inputs with default values
+        const measurementIntervalEl = document.getElementById('measurementInterval');
+        if (measurementIntervalEl) measurementIntervalEl.value = '60';
+        const modbusBaudEl = document.getElementById('modbusBaud');
+        if (modbusBaudEl) modbusBaudEl.value = '9600';
+        // Uncheck all checkboxes
+        const checkboxes = ['vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'bmpenabled', 'mpuenabled', 'tiltenabled', 'chargerenabled', 'chargingenabled', 'battadcenabled', 'v420enabled', 'v012venabled', 'modbusmodenabled', 'straingaugeenabled'];
+        checkboxes.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.checked = false;
+        });
+        // Reset selects to default
+        const batteryTypeEl = document.getElementById('batteryType');
+        if (batteryTypeEl) batteryTypeEl.value = '0';
+        const modbusRegTypeEl = document.getElementById('modbusRegType');
+        if (modbusRegTypeEl) modbusRegTypeEl.value = '0';
+        // Clear config preview
+        const configPreviewEl = document.getElementById('configPreview');
+        if (configPreviewEl) configPreviewEl.value = '';
+        const configStatusEl = document.getElementById('configStatus');
+        if (configStatusEl) configStatusEl.innerHTML = 'Not saved';
     }
 
     function onDisconnected(event) {
