@@ -7,7 +7,6 @@
     btnDisconnect: document.getElementById('btnDisconnect'),
     fileInput: document.getElementById('fileInput'),
     chunkSize: document.getElementById('chunkSize'),
-    fastMode: document.getElementById('fastMode'),
     btnStart: document.getElementById('btnStart'),
     btnAbort: document.getElementById('btnAbort'),
     progress: document.getElementById('progress'),
@@ -186,19 +185,6 @@
       const pct = Math.round((sentSize / totalSize) * 100);
       updateProgress(pct);
       setXfer(sentSize, totalSize);
-      
-      // Long pause every 256KB to let device catch up with flash writes
-      const bytesInto256KB = sentSize % 262144;
-      if (bytesInto256KB < chunk && sentSize > chunk) {
-        log(`Pausing at ${sentSize} bytes to let device catch up...`);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      }
-      // Short pause every 10 chunks for connection keepalive
-      else if ((off / chunk) % 10 === 0 && off > 0) {
-        // Fast mode: 25ms, Slow mode: 50ms
-        const pauseDuration = els.fastMode.checked ? 25 : 50;
-        await new Promise(resolve => setTimeout(resolve, pauseDuration));
-      }
     }
 
     // END opcode 0x02
