@@ -54,11 +54,6 @@
                     <p class="reading">Pressure: <span id="pressure">--</span> hPa</p>
                     <p class="reading">Altitude: <span id="altitude">--</span> m</p>
                 </div>
-
-                <div class="card">
-                    <h2>SEN0313</h2>
-                    <p class="reading">Distance: <span id="sen0313distance">--</span></p>
-                </div>
             </div>
 
             <!-- Vibrating Wire Sensors - Grouped -->
@@ -257,7 +252,6 @@
 
                 <div class="card">
                     <h2>LoRaWAN Configuration</h2>
-                    <p class="reading">Firmware Version: <span id="firmwareVersion">--</span></p>
                     <div class="settings-group">
                         <label for="devEUI">Device EUI:</label>
                         <input type="text" id="devEUI" placeholder="0000000000000000" maxlength="16" class="settings-input eui-input">
@@ -304,9 +298,6 @@
                     <div class="settings-group">
                         <label for="numReadings">Number of Readings:</label>
                         <input type="number" id="numReadings" min="1" max="10" class="settings-input">
-                    </div>
-                    <div class="settings-group">
-                        <label><input type="checkbox" id="sen0313enabled"> SEN0313 Enabled</label>
                     </div>
                     <div class="settings-group">
                         <label><input type="checkbox" id="bmpenabled"> BMP Enabled</label>
@@ -544,7 +535,6 @@
 
         // Load cell
         loadcell: reverseUuidBytes('3fa85f64-5760-4562-b3fc-2c963f66afa6'),
-        sen0313distance: reverseUuidBytes('3fa85f64-5761-4562-b3fc-2c963f66afa6'),
         // V2 analog inputs
         v420: reverseUuidBytes('3fa85f64-5770-4562-b3fc-2c963f66afa6'),
         v012: reverseUuidBytes('3fa85f64-5771-4562-b3fc-2c963f66afa6'),
@@ -579,9 +569,7 @@
         modbusmodregaddress: reverseUuidBytes('3fa85f64-58aa-4562-b3fc-2c963f66afa6'),
         modbusmodregtype: reverseUuidBytes('3fa85f64-58ab-4562-b3fc-2c963f66afa6'),
         straingaugeenabled: reverseUuidBytes('3fa85f64-58ac-4562-b3fc-2c963f66afa6'),
-        straingaugenumreadings: reverseUuidBytes('3fa85f64-58ad-4562-b3fc-2c963f66afa6'),
-        sen0313enabled: reverseUuidBytes('3fa85f64-58ae-4562-b3fc-2c963f66afa6'),
-        firmwareversion: reverseUuidBytes('3fa85f64-58af-4562-b3fc-2c963f66afa6')
+        straingaugenumreadings: reverseUuidBytes('3fa85f64-58ad-4562-b3fc-2c963f66afa6')
     };
 
     // Global Variables to Handle Bluetooth
@@ -765,7 +753,7 @@
     async function readAllCharacteristics() {
         for (const [name, characteristic] of Object.entries(connectedCharacteristics)) {
             // Skip settings characteristics in general read
-            if (['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval', 'firmwareversion', 'vwmoduletype', 'vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'numreadings', 'sen0313enabled', 'bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','batterytype','batterysize','battadcenabled','v012venabled','v012vnumreadings','modbusmodenabled','modbusmodbaudrate','modbusmodregaddress','modbusmodregtype','straingaugeenabled','straingaugenumreadings'].includes(name)) {
+            if (['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval', 'vwmoduletype', 'vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'numreadings', 'bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','batterytype','batterysize','battadcenabled','v012venabled','v012vnumreadings','modbusmodenabled','modbusmodbaudrate','modbusmodregaddress','modbusmodregtype','straingaugeenabled','straingaugenumreadings'].includes(name)) {
                 continue;
             }
             // Skip disabled analog readings per settings
@@ -902,14 +890,11 @@
 
     // Settings Functions
     async function readSettingsFromDevice() {
-        const settingsCharacteristics = ['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval', 'firmwareversion', 'vwmoduletype', 'vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'numreadings', 'sen0313enabled', 'bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','batterytype','batterysize','battadcenabled','v420enabled','v420numreadings','v012venabled','v012vnumreadings','modbusmodenabled','modbusmodbaudrate','modbusmodregaddress','modbusmodregtype','straingaugeenabled','straingaugenumreadings'];
+        const settingsCharacteristics = ['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval', 'vwmoduletype', 'vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'numreadings', 'bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','batterytype','batterysize','battadcenabled','v420enabled','v420numreadings','v012venabled','v012vnumreadings','modbusmodenabled','modbusmodbaudrate','modbusmodregaddress','modbusmodregtype','straingaugeenabled','straingaugenumreadings'];
         
         for (const charName of settingsCharacteristics) {
             if (!connectedCharacteristics[charName]) {
                 console.log(`${charName} characteristic not available`);
-                if (charName === 'firmwareversion') {
-                    document.getElementById('firmwareVersion').textContent = 'N/A';
-                }
                 continue;
             }
 
@@ -918,9 +903,6 @@
                 handleSettingsCharacteristic(charName, value);
             } catch (error) {
                 console.error(`Error reading ${charName}:`, error);
-                if (charName === 'firmwareversion') {
-                    document.getElementById('firmwareVersion').textContent = 'N/A';
-                }
             }
         }
         
@@ -974,11 +956,6 @@
                     document.getElementById(`current${characteristicName.charAt(0).toUpperCase() + characteristicName.slice(1)}`).innerHTML = displayValue;
                 }
                 break;
-            case 'firmwareversion':
-                if (value.byteLength === 2) {
-                    document.getElementById('firmwareVersion').textContent = new DataView(value.buffer).getUint16(0, true);
-                }
-                break;
             case 'vwmoduletype':
                 if (value.byteLength === 1) {
                     displayValue = new DataView(value.buffer).getUint8(0);
@@ -989,7 +966,6 @@
             case 'vw2enabled':
             case 'vw3enabled':
             case 'vw4enabled':
-            case 'sen0313enabled':
                 if (value.byteLength === 1) {
                     const enabled = new DataView(value.buffer).getUint8(0) ? true : false;
                     document.getElementById(characteristicName).checked = enabled;
@@ -1151,7 +1127,7 @@
                 console.log('numreadings written:', nr);
             }
             // Other toggles
-            for (const name of ['sen0313enabled','bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','battadcenabled','v420enabled','v012venabled','modbusmodenabled','straingaugeenabled']) {
+            for (const name of ['bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','battadcenabled','v420enabled','v012venabled','modbusmodenabled','straingaugeenabled']) {
                 if (connectedCharacteristics[name]) {
                     const checked = document.getElementById(name).checked ? 1 : 0;
                     await connectedCharacteristics[name].writeValue(new Uint8Array([checked]));
