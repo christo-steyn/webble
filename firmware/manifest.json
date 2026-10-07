@@ -1,16 +1,30 @@
 [
   {
-    "name": "tsflorawanv1.bin",
-    "path": "firmware/tsflorawanv1.bin",
-    "size": 1419952,
-    "version": "unknown",
-    "description": "Latest Version"
-  },
-  {
     "name": "tsflorawanv1-87c4ce1-dirty.bin",
     "path": "firmware/tsflorawanv1-87c4ce1-dirty.bin",
     "size": 1419952,
     "version": "unknown",
     "description": "Development build"
+  },
+  {
+    "name": "tsflorawanv1.bin",
+    "path": "firmware/tsflorawanv1.bin",
+    "size": 1419952,
+    "version": "unknown",
+    "description": "Unknown Version"
+  },
+  {
+    "name": "tsflorawanv207.bin",
+    "path": "firmware/tsflorawanv207.bin",
+    "size": 830272,
+    "version": "unknown",
+    "description": ""
+  },
+  {
+    "name": "tsflorawanv208.bin",
+    "path": "firmware/tsflorawanv208.bin",
+    "size": 1428320,
+    "version": "unknown",
+    "description": ""
   }
 ]

@@ -31,19 +31,15 @@ class FirmwareHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             if not firmware_dir.exists():
                 firmware_dir.mkdir(exist_ok=True)
             
-            # Include binaries from both supported server-side firmware folders.
             firmware_files = []
-            for directory in (firmware_dir, Path('ota')):
-                if not directory.exists():
-                    continue
-                for file in sorted(directory.glob('*.bin')):
-                    stat = file.stat()
-                    firmware_files.append({
-                        'name': file.name,
-                        'path': f'{directory.as_posix()}/{file.name}',
-                        'size': stat.st_size,
-                        'modified': stat.st_mtime
-                    })
+            for file in sorted(firmware_dir.glob('*.bin')):
+                stat = file.stat()
+                firmware_files.append({
+                    'name': file.name,
+                    'path': f'{firmware_dir.as_posix()}/{file.name}',
+                    'size': stat.st_size,
+                    'modified': stat.st_mtime
+                })
             
             # Send JSON response
             self.send_response(200)
