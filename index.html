@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>TSF LoRaWAN ULP Gateway V1.2</title>
+    <title>TSF LoRaWAN ULP Gateway V1.32</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="favicon.ico">
     <link rel="stylesheet" type="text/css" href="style.css">
@@ -9,18 +9,20 @@
 </head>
 <body>
     <div class="topnav">
-        <h1>TSF LoRaWAN ULP Gateway V1.3</h1>
-    </div>
-
-    <!-- BLE Connection Controls - Always Visible -->
-    <div class="content">
-        <div class="card-grid">
-            <div class="card ble-connection-card">
-                <p>
-                    <button id="connectBleButton" class="connectButton"> Connect to BLE Device</button>
-                    <button id="disconnectBleButton" class="disconnectButton"> Disconnect BLE Device</button>
+        <div class="topnav-content">
+            <h1>TSF LoRaWAN ULP Gateway V1.32</h1>
+            <div class="ble-controls">
+                <div class="ble-buttons">
+                    <button id="bleToggleButton" class="disconnectButton">
+                        <span class="button-main">Disconnected</span>
+                        <span class="button-subtitle">Press to connect</span>
+                    </button>
+                </div>
+                <p id="bluefyMessage" class="gray-label" style="display:none; color: #ff9800; margin-top: 10px;">
+                    Web Bluetooth is not supported on iOS Safari. 
+                    <a href="#" id="openBluefyLink" style="color: #2196F3; text-decoration: underline;">Open in Bluefy Browser</a>
                 </p>
-                <p class="gray-label">BLE state: <strong><span id="bleState" class="status-disconnected">Disconnected</span></strong></p>
+                <p class="ble-state-label"><span id="bleState"></span></p>
             </div>
         </div>
     </div>
@@ -142,6 +144,7 @@
                     <button id="offButton" class="offButton">OFF</button> -->
                     <button id="readAllButton" class="subButton" title="Read all characteristics without triggering acquisition">Read Current Values</button>
                     <button id="refreshButton" class="subButton" title="Trigger device acquisition and then read all">Acquire New Measurements</button>
+                    <button id="batteryMonitorButton" class="subButton" title="Precharge supercap during battery replacement (device will monitor charging)">Battery Replacement Supercap Precharge</button>
                     <p class="gray-label">Last value sent: <span id="valueSent"></span></p>
                 </div>
 
@@ -194,8 +197,8 @@
             </div>
 
             <div class="card-grid">
-                <div class="card">
-                    <h2>Firmware</h2>
+                <div class="card ota-card">
+                    <h2>🔄 Firmware Update</h2>
                     <div class="row hidden">
                         <label>Service UUID</label>
                         <input id="svcUuid" type="text" value="3fa85f64-5800-4562-b3fc-2c963f66afa6" title="Service UUID" placeholder="Service UUID" />
@@ -208,28 +211,58 @@
                         <label>Data Char UUID</label>
                         <input id="dataUuid" type="text" value="3fa85f64-58b1-4562-b3fc-2c963f66afa6" title="Data characteristic UUID" placeholder="Data characteristic UUID" />
                     </div>
-                    <div class="row">
-                        <label>Choose .bin file</label>
-                        <input id="fileInput" type="file" accept=".bin" title="Firmware .bin" />
+                    
+                    <div class="firmware-source-section">
+                        <h3>Select Firmware Source</h3>
+                        <div class="row">
+                            <label>Server Firmware</label>
+                            <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+                                <select id="firmwareSelect" title="Choose from server firmware folder">
+                                    <option value="">-- Select from server --</option>
+                                </select>
+                                <button id="refreshFirmwareBtn" class="small-btn" title="Refresh firmware list">🔄</button>
+                            </div>
+                        </div>
+                        <div class="or-divider">OR</div>
+                        <div class="row">
+                            <label>Local File</label>
+                            <input id="fileInput" type="file" accept=".bin" title="Choose local firmware .bin" />
+                        </div>
                     </div>
-                    <div class="row">
-                        <label>Chunk Size (bytes)</label>
-                        <input id="chunkSize" type="number" value="180" min="20" max="1024" title="Chunk size" />
+                    
+                    <div class="firmware-details-section">
+                        <h3>Transfer Settings</h3>
+                        <div class="row">
+                            <label>Chunk Size (bytes)</label>
+                            <input id="chunkSize" type="number" value="180" min="20" max="512" title="Chunk size" />
+                        </div>
+                        <div class="row">
+                            <label>Transfer Speed</label>
+                            <label class="checkbox-label">
+                                <input id="fastMode" type="checkbox" title="Fast mode (less stable)" />
+                                <span>Fast Mode (less stable, may timeout on some devices)</span>
+                            </label>
+                        </div>
+                        <div class="row">
+                            <label>Computed CRC32</label>
+                            <input id="crcOut" type="text" readonly title="CRC32" placeholder="Select file to compute" />
+                        </div>
                     </div>
-                    <div class="row">
-                        <label>Computed CRC32</label>
-                        <input id="crcOut" type="text" readonly title="CRC32" placeholder="Select file to compute" />
-                    </div>
+                    
                     <div class="row buttons">
                         <button id="btnStart" disabled>Start OTA</button>
                         <button id="btnAbort" disabled>Abort</button>
                     </div>
-                    <progress id="progress" value="0" max="100"></progress>
-                    <div class="row">
-                        <label>Transferred</label>
-                        <input id="xferOut" type="text" readonly placeholder="0 / 0 bytes" />
+                    
+                    <div class="ota-progress-section">
+                        <progress id="progress" value="0" max="100"></progress>
+                        <div class="row">
+                            <label>Transferred</label>
+                            <input id="xferOut" type="text" readonly placeholder="0 / 0 bytes" />
+                        </div>
+                        <div class="status" id="status">Idle</div>
                     </div>
-                    <div class="status" id="status">Idle</div>
+                    
                     <div class="log" id="log"></div>
                 </div>
             </div>
@@ -453,12 +486,12 @@
     }
 
     // DOM Elements
-    const connectButton = document.getElementById('connectBleButton');
-    const disconnectButton = document.getElementById('disconnectBleButton');
+    const bleToggleButton = document.getElementById('bleToggleButton');
     const onButton = document.getElementById('onButton');
     const offButton = document.getElementById('offButton');
     const readAllButton = document.getElementById('readAllButton');
     const refreshButton = document.getElementById('refreshButton');
+    const batteryMonitorButton = document.getElementById('batteryMonitorButton');
     const latestValueSent = document.getElementById('valueSent');
     const bleStateContainer = document.getElementById('bleState');
     const timestampContainer = document.getElementById('timestamp');
@@ -608,15 +641,31 @@
     };
 
     // Event Listeners
-    connectButton.addEventListener('click', (event) => {
-        if (isWebBluetoothEnabled()) {
-            // Update deviceName from input field before connecting
-            deviceName = document.getElementById('deviceName').value || 'TSFLora';
-            connectToDevice();
+    bleToggleButton.addEventListener('click', (event) => {
+        if (bleServer && bleServer.connected) {
+            // Currently connected, so disconnect
+            disconnectDevice();
+        } else {
+            // Not connected, so connect
+            if (isWebBluetoothEnabled()) {
+                // Update deviceName from input field before connecting
+                deviceName = document.getElementById('deviceName').value || 'TSFLora';
+                connectToDevice();
+            }
         }
     });
 
-    disconnectButton.addEventListener('click', disconnectDevice);
+    // Setup Bluefy link for iOS devices
+    const openBluefyLink = document.getElementById('openBluefyLink');
+    if (openBluefyLink) {
+        openBluefyLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            const currentUrl = window.location.href;
+            const bluefyUrl = `bluefy://open?url=${encodeURIComponent(currentUrl)}`;
+            console.log('Opening in Bluefy:', bluefyUrl);
+            window.location.href = bluefyUrl;
+        });
+    }
     // onButton.addEventListener('click', () => writeOnCharacteristic(1));
     // offButton.addEventListener('click', () => writeOnCharacteristic(0));
     readAllButton.addEventListener('click', () => {
@@ -635,6 +684,32 @@
         }
         // Give the device a short moment to sample
         setTimeout(readAllCharacteristics, 200);
+    });
+
+    batteryMonitorButton.addEventListener('click', async () => {
+        try {
+            // Start supercap precharge for battery replacement
+            if (connectedCharacteristics.write) {
+                const confirmed = confirm(
+                    'BATTERY REPLACEMENT SUPERCAP PRECHARGE\n\n' +
+                    'This mode precharges the supercapacitor during battery replacement.\n\n' +
+                    'Device will flash GREEN LED while charging.\n' +
+                    'LED turns SOLID GREEN when supercap reaches 3.5V (ready).\n\n' +
+                    'You must RESET the device after battery replacement to return to normal operation.\n\n' +
+                    'Start precharge?'
+                );
+                if (confirmed) {
+                    await connectedCharacteristics.write.writeValue(new Uint8Array([0x20]));
+                    console.log('Supercap precharge command sent (0x20)');
+                    alert('Supercap precharge started. LED will flash GREEN until 3.5V reached, then turn solid.');
+                }
+            } else {
+                alert('BLE write characteristic not available. Please reconnect.');
+            }
+        } catch (e) {
+            console.log('Supercap precharge command failed:', e);
+            alert('Failed to send precharge command: ' + e.message);
+        }
     });
 
     // Settings Event Listeners
@@ -676,10 +751,49 @@
         return revHex.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5').toLowerCase();
     }
 
+    function isIOS() {
+        return [
+            'iPad Simulator',
+            'iPhone Simulator',
+            'iPod Simulator',
+            'iPad',
+            'iPhone',
+            'iPod'
+        ].includes(navigator.platform)
+        // iPad on iOS 13 detection
+        || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+    }
+
     function isWebBluetoothEnabled() {
         if (!navigator.bluetooth) {
             console.log('Web Bluetooth API is not available in this browser!');
-            bleStateContainer.innerHTML = "Web Bluetooth API is not available in this browser/device!";
+            console.log('Current URL:', window.location.href);
+            console.log('Is secure context:', window.isSecureContext);
+            
+            // Check if we're on iOS and show Bluefy option
+            if (isIOS()) {
+                bleStateContainer.innerHTML = "Web Bluetooth not available on iOS";
+                // Show the Bluefy message
+                const bluefyMessage = document.getElementById('bluefyMessage');
+                if (bluefyMessage) {
+                    bluefyMessage.style.display = 'block';
+                }
+            } else {
+                // Check if it's a secure context issue
+                if (!window.isSecureContext && !window.location.hostname.match(/^(localhost|127\.0\.0\.1)$/)) {
+                    bleStateContainer.innerHTML = "Web Bluetooth requires HTTPS or localhost!";
+                    const bluefyMessage = document.getElementById('bluefyMessage');
+                    if (bluefyMessage) {
+                        bluefyMessage.innerHTML = 'Web Bluetooth requires a secure connection (HTTPS). ' +
+                            '<br><strong>Solutions:</strong><br>' +
+                            '• Use <code>https://</code> instead of <code>http://</code><br>' +
+                            '• Or access via <a href="http://localhost:' + window.location.port + '/" style="color: #2196F3;">http://localhost:' + window.location.port + '/</a>';
+                        bluefyMessage.style.display = 'block';
+                    }
+                } else {
+                    bleStateContainer.innerHTML = "Web Bluetooth API is not available in this browser/device!";
+                }
+            }
             return false;
         }
         console.log('Web Bluetooth API supported in this browser.');
@@ -688,10 +802,19 @@
 
     function connectToDevice() {
         console.log('Initializing Bluetooth...');
-        navigator.bluetooth.requestDevice({
-            filters: [{namePrefix: deviceName}],
-            optionalServices: [bleService, otaServiceUuid, 0x180A]
-        })
+        console.log('Looking for devices with name prefix:', deviceName);
+        console.log('Make sure device is powered on and advertising');
+        
+        // Try with namePrefix only first (works for most devices)
+        // If device advertises the service, it will still match
+        const filterOptions = {
+            filters: [{ namePrefix: deviceName }],
+            optionalServices: [bleService, otaServiceUuid, '0000180a-0000-1000-8000-00805f9b34fb'] // Device Information Service
+        };
+        
+        console.log('Requesting device with filters:', filterOptions);
+        
+        navigator.bluetooth.requestDevice(filterOptions)
         .then(device => {
             console.log('Device Selected:', device.name);
             // Show connecting state until GATT connect completes
@@ -710,6 +833,9 @@
                 bleStateContainer.innerHTML = 'Connected to device ' + bleDevice.name;
                 bleStateContainer.style.color = "#24af37";
             }
+            // Update button to connected state (green)
+            bleToggleButton.innerHTML = '<span class="button-main">Connected</span><span class="button-subtitle">Press to disconnect</span>';
+            bleToggleButton.className = 'connectButton';
             // Start connection watchdog to catch unexpected disconnects
             if (connWatchdog) clearInterval(connWatchdog);
             connWatchdog = setInterval(() => {
@@ -733,8 +859,11 @@
         })
         .catch(error => {
             console.log('Error: ', error);
-            bleStateContainer.innerHTML = "Connection failed";
+            bleStateContainer.innerHTML = "Connection failed: " + error.message;
             bleStateContainer.style.color = "#d13a30";
+            // Reset button to disconnected state (red) on error
+            bleToggleButton.innerHTML = '<span class="button-main">Disconnected</span><span class="button-subtitle">Press to connect</span>';
+            bleToggleButton.className = 'disconnectButton';
         });
     }
 
@@ -1373,6 +1502,28 @@
         } else {
             updateConfigPreview();
         }
+        
+        // Check for Web Bluetooth availability and show appropriate messages
+        if (!navigator.bluetooth) {
+            if (isIOS()) {
+                const bluefyMessage = document.getElementById('bluefyMessage');
+                if (bluefyMessage) {
+                    bluefyMessage.style.display = 'block';
+                }
+                bleStateContainer.innerHTML = 'Web Bluetooth not available on iOS';
+            } else if (!window.isSecureContext && !window.location.hostname.match(/^(localhost|127\.0\.0\.1)$/)) {
+                // Show HTTPS requirement message
+                bleStateContainer.innerHTML = 'Web Bluetooth requires HTTPS or localhost!';
+                const bluefyMessage = document.getElementById('bluefyMessage');
+                if (bluefyMessage) {
+                    bluefyMessage.innerHTML = 'Web Bluetooth requires a secure connection (HTTPS). ' +
+                        '<br><strong>Solutions:</strong><br>' +
+                        '• Use <code>https://</code> instead of <code>http://</code><br>' +
+                        '• Or access via <a href="http://localhost:' + window.location.port + '/" style="color: #2196F3;">http://localhost:' + window.location.port + '/</a>';
+                    bluefyMessage.style.display = 'block';
+                }
+            }
+        }
     });
 
     function updateDisconnectedUI() {
@@ -1384,6 +1535,9 @@
         bleStateContainer.style.color = "#d13a30";
         connectedCharacteristics = {};
         connectedCountContainer.innerHTML = "0";
+        // Update button to disconnected state (red)
+        bleToggleButton.innerHTML = '<span class="button-main">Disconnected</span><span class="button-subtitle">Press to connect</span>';
+        bleToggleButton.className = 'disconnectButton';
         // Reset Write gating
         try { settingsReadOnce = false; updateWriteButtonEnabled(); } catch {}
         // Reset OTA UI
@@ -1395,6 +1549,60 @@
             const statusEl = document.getElementById('status');
             if (statusEl) statusEl.textContent = 'Idle';
         } catch {}
+        // Reset all sensor values to "--"
+        const sensorIds = [
+            'supplyVoltage', 'batteryVoltage', 'vbat', 'batteryPercent',
+            'temperature', 'pressure', 'altitude',
+            'tempvw1', 'freqvw1', 'tempvw2', 'freqvw2', 'tempvw3', 'freqvw3', 'tempvw4', 'freqvw4',
+            'ax', 'ay', 'az', 'gx', 'gy', 'gz',
+            'pitch', 'roll', 'yaw', 'loadcell',
+            'v420', 'v012', 'timestamp',
+            'currentDevEUI', 'currentJoinEUI', 'currentAppKey', 'currentNwkKey', 'currentInterval',
+            'valueSent',
+            'readDevEUI', 'readJoinEUI', 'readAppKey', 'readNwkKey', 'readInterval'
+        ];
+        sensorIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '--';
+        });
+        // Clear QR code
+        const qrCodeEl = document.getElementById('devEUIQRCode');
+        if (qrCodeEl) qrCodeEl.innerHTML = '';
+        // Clear settings input fields
+        const textInputs = ['devEUI', 'joinEUI', 'appKey', 'nwkKey'];
+        textInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        // Reset device name to default
+        const deviceNameEl = document.getElementById('deviceName');
+        if (deviceNameEl) deviceNameEl.value = 'TSFLora';
+        const numberInputs = ['vwModuleType', 'numReadings', 'batterySize', 'v420numreadings', 'v012vnumreadings', 'modbusRegAddress', 'straingaugenumreadings'];
+        numberInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        // Reset defaults for inputs with default values
+        const measurementIntervalEl = document.getElementById('measurementInterval');
+        if (measurementIntervalEl) measurementIntervalEl.value = '60';
+        const modbusBaudEl = document.getElementById('modbusBaud');
+        if (modbusBaudEl) modbusBaudEl.value = '9600';
+        // Uncheck all checkboxes
+        const checkboxes = ['vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'bmpenabled', 'mpuenabled', 'tiltenabled', 'chargerenabled', 'chargingenabled', 'battadcenabled', 'v420enabled', 'v012venabled', 'modbusmodenabled', 'straingaugeenabled'];
+        checkboxes.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.checked = false;
+        });
+        // Reset selects to default
+        const batteryTypeEl = document.getElementById('batteryType');
+        if (batteryTypeEl) batteryTypeEl.value = '0';
+        const modbusRegTypeEl = document.getElementById('modbusRegType');
+        if (modbusRegTypeEl) modbusRegTypeEl.value = '0';
+        // Clear config preview
+        const configPreviewEl = document.getElementById('configPreview');
+        if (configPreviewEl) configPreviewEl.value = '';
+        const configStatusEl = document.getElementById('configStatus');
+        if (configStatusEl) configStatusEl.innerHTML = 'Not saved';
     }
 
     function onDisconnected(event) {
@@ -1475,16 +1683,20 @@
         crcOut: () => document.getElementById('crcOut'),
         xferOut: () => document.getElementById('xferOut'),
         fileInput: () => document.getElementById('fileInput'),
-        chunkSize: () => document.getElementById('chunkSize')
+        chunkSize: () => document.getElementById('chunkSize'),
+        fastMode: () => document.getElementById('fastMode'),
+        firmwareSelect: () => document.getElementById('firmwareSelect'),
+        refreshFirmwareBtn: () => document.getElementById('refreshFirmwareBtn')
     };
 
-    const otaState = { service: null, ctrlChar: null, dataChar: null, totalSize: 0, sentSize: 0 };
+    const otaState = { service: null, ctrlChar: null, dataChar: null, totalSize: 0, sentSize: 0, selectedFirmwareBlob: null };
 
     function otaSetStatus(text) { const el = otaEls.status(); if (el) el.textContent = text; }
     function otaLog(msg) { const el = otaEls.log(); if (!el) return; const p = document.createElement('div'); p.textContent = msg; el.prepend(p); }
     function otaSetConnectedUI(connected) {
         const s = otaEls.btnStart(); const a = otaEls.btnAbort();
-        if (s) s.disabled = !connected || !(otaEls.fileInput()?.files?.[0]);
+        const hasFile = !!(otaEls.fileInput()?.files?.[0] || otaState.selectedFirmwareBlob);
+        if (s) s.disabled = !connected || !hasFile;
         if (a) a.disabled = !connected;
     }
     function otaUpdateProgress(val) { const p = otaEls.progress(); if (p) p.value = val; }
@@ -1551,7 +1763,9 @@
     async function startOTA() {
         if (!(bleServer && bleServer.connected)) { alert('Connect BLE device first'); return; }
         if (!otaState.service || !otaState.ctrlChar || !otaState.dataChar) { await initOtaIfNeeded(); }
-        const file = otaEls.fileInput().files[0]; if (!file) return;
+        // Use either local file or server firmware
+        const file = otaEls.fileInput().files[0] || otaState.selectedFirmwareBlob;
+        if (!file) return;
         const ab = await file.arrayBuffer(); const all = new Uint8Array(ab);
         otaState.totalSize = all.length; const crc = crc32(all);
         otaEls.crcOut().value = '0x' + crc.toString(16).padStart(8, '0'); otaState.sentSize = 0; otaUpdateProgress(0); otaSetStatus('Starting OTA…');
@@ -1563,6 +1777,17 @@
             await otaState.dataChar.writeValueWithoutResponse(slice);
             otaState.sentSize += slice.length; const pct = Math.round((otaState.sentSize / otaState.totalSize) * 100);
             otaUpdateProgress(pct); otaSetXfer(otaState.sentSize, otaState.totalSize);
+            // Long pause every 256KB to let device catch up with flash writes
+            const bytesInto256KB = otaState.sentSize % 262144;
+            if (bytesInto256KB < chunk && otaState.sentSize > chunk) {
+                otaLog(`Pausing at ${otaState.sentSize} bytes to let device catch up...`);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            }
+            // Short pause every 10 chunks for connection keepalive
+            else if ((off / chunk) % 10 === 0 && off > 0) { 
+                const pauseDuration = otaEls.fastMode().checked ? 25 : 50;
+                await new Promise(resolve => setTimeout(resolve, pauseDuration)); 
+            }
         }
         await otaState.ctrlChar.writeValue(Uint8Array.of(0x02)); otaSetStatus('Finalizing…');
     }
@@ -1572,17 +1797,105 @@
         catch (e) { otaLog('Abort error: ' + e.message); }
     }
 
+    // Firmware listing functions
+    async function loadFirmwareList() {
+        try {
+            const response = await fetch('firmware/manifest.json');
+            if (!response.ok) throw new Error('Failed to fetch firmware manifest');
+            const firmwareList = await response.json();
+            const select = otaEls.firmwareSelect();
+            if (!select) return;
+            // Clear existing options except first
+            while (select.options.length > 1) select.remove(1);
+            // Add firmware options
+            firmwareList.forEach(fw => {
+                const option = document.createElement('option');
+                option.value = fw.path;
+                const sizeMB = (fw.size / 1024 / 1024).toFixed(2);
+                let label = `${fw.name} (${sizeMB} MB)`;
+                if (fw.version && fw.version !== 'unknown') label = `${fw.name} v${fw.version} (${sizeMB} MB)`;
+                if (fw.description) label += ` - ${fw.description}`;
+                option.textContent = label;
+                select.appendChild(option);
+            });
+            otaLog(`Loaded ${firmwareList.length} firmware file(s)`);
+            // Auto-select first firmware if available
+            if (firmwareList.length > 0) {
+                select.selectedIndex = 1; // Select first firmware (index 1, since 0 is "-- Select from server --")
+                await onFirmwareSelected(); // Trigger the selection handler
+            }
+        } catch (err) {
+            otaLog('Failed to load firmware list: ' + err.message);
+            console.error('Firmware list error:', err);
+        }
+    }
+    
+    async function onFirmwareSelected() {
+        const select = otaEls.firmwareSelect();
+        const path = select.value;
+        if (!path) {
+            otaState.selectedFirmwareBlob = null;
+            otaEls.crcOut().value = '';
+            otaSetXfer(0, 0);
+            otaSetConnectedUI(bleServer && bleServer.connected);
+            return;
+        }
+        // Clear file input when server firmware is selected
+        const fileInput = otaEls.fileInput();
+        if (fileInput) fileInput.value = '';
+        
+        try {
+            otaLog('Downloading firmware: ' + path);
+            const response = await fetch(path);
+            if (!response.ok) throw new Error('Failed to download firmware');
+            const blob = await response.blob();
+            // Create a File object from blob for compatibility
+            otaState.selectedFirmwareBlob = new File([blob], path.split('/').pop(), { type: 'application/octet-stream' });
+            // Compute CRC32
+            const ab = await blob.arrayBuffer();
+            const crc = crc32(new Uint8Array(ab));
+            otaEls.crcOut().value = '0x' + crc.toString(16).padStart(8, '0');
+            otaLog('Downloaded and computed CRC32: ' + otaEls.crcOut().value);
+            otaState.totalSize = ab.byteLength;
+            otaState.sentSize = 0;
+            otaUpdateProgress(0);
+            otaSetXfer(0, otaState.totalSize);
+            otaSetConnectedUI(bleServer && bleServer.connected);
+        } catch (err) {
+            otaLog('Failed to download firmware: ' + err.message);
+            otaState.selectedFirmwareBlob = null;
+            otaEls.crcOut().value = '';
+            otaSetXfer(0, 0);
+        }
+    }
+    
     // Bind OTA events
     (function bindOta() {
         const s = otaEls.btnStart(); const a = otaEls.btnAbort(); const f = otaEls.fileInput();
+        const fwSelect = otaEls.firmwareSelect(); const refreshBtn = otaEls.refreshFirmwareBtn();
+        
         if (s) s.addEventListener('click', startOTA);
         if (a) a.addEventListener('click', abortOTA);
+        
         if (f) f.addEventListener('change', () => {
-            const file = otaEls.fileInput().files[0]; otaEls.btnStart().disabled = !(bleServer && bleServer.connected) || !file;
+            const file = otaEls.fileInput().files[0];
+            // Clear server selection when local file is chosen
+            if (file && fwSelect) {
+                fwSelect.value = '';
+                otaState.selectedFirmwareBlob = null;
+            }
+            const hasFile = !!(file || otaState.selectedFirmwareBlob);
+            otaEls.btnStart().disabled = !(bleServer && bleServer.connected) || !hasFile;
             if (file) {
                 file.arrayBuffer().then(ab => { const crc = crc32(new Uint8Array(ab)); otaEls.crcOut().value = '0x' + crc.toString(16).padStart(8, '0'); otaLog('Computed CRC32 for selected file: ' + otaEls.crcOut().value); otaState.totalSize = ab.byteLength; otaState.sentSize = 0; otaUpdateProgress(0); otaSetXfer(0, otaState.totalSize); }).catch(() => { otaEls.crcOut().value = ''; otaLog('Failed to compute CRC32'); otaSetXfer(0, 0); });
-            } else { otaEls.crcOut().value = ''; otaSetXfer(0, 0); }
+            } else if (!otaState.selectedFirmwareBlob) { otaEls.crcOut().value = ''; otaSetXfer(0, 0); }
         });
+        
+        if (fwSelect) fwSelect.addEventListener('change', onFirmwareSelected);
+        if (refreshBtn) refreshBtn.addEventListener('click', loadFirmwareList);
+        
+        // Load firmware list on page load
+        loadFirmwareList();
     })();
 
     // Initialize OTA when switching to OTA tab

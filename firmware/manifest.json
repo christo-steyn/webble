@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tsflorawanv1.bin",
+    "path": "firmware/tsflorawanv1.bin",
+    "size": 1419952,
+    "version": "unknown",
+    "description": "Latest Version"
+  },
+  {
+    "name": "tsflorawanv1-87c4ce1-dirty.bin",
+    "path": "firmware/tsflorawanv1-87c4ce1-dirty.bin",
+    "size": 1419952,
+    "version": "unknown",
+    "description": "Development build"
+  }
+]

@@ -54,7 +54,14 @@
       </div>
       <div class="row">
         <label>Chunk Size (bytes)</label>
-        <input id="chunkSize" type="number" value="180" min="20" max="1024" title="Chunk size" />
+        <input id="chunkSize" type="number" value="180" min="20" max="512" title="Chunk size" />
+      </div>
+      <div class="row">
+        <label>Transfer Speed</label>
+        <label style="display: flex; align-items: center; gap: 8px;">
+          <input id="fastMode" type="checkbox" title="Fast mode (less stable)" />
+          <span>Fast Mode (less stable, may timeout on some devices)</span>
+        </label>
       </div>
       <div class="row">
         <label>Computed CRC32</label>
