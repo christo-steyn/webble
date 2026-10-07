@@ -29,7 +29,7 @@ The server will start at `http://localhost:8080`
 
 ### Adding Firmware Files
 
-1. Place your `.bin` firmware files in the `webble/firmware/` folder
+1. Place your `.bin` firmware files in either `webble/firmware/` or `webble/ota/`
 2. Run the manifest generator:
    ```bash
    # Windows
@@ -57,7 +57,7 @@ webble/
 1. **Connect to Device**: Click "Connect to BLE Device" and select your ESP32
 2. **Switch to OTA Tab**: Navigate to the OTA tab
 3. **Select Firmware**:
-   - **Option A**: Choose from the "Server Firmware" dropdown
+   - **Option A**: Choose from the "Server Firmware" dropdown, which lists files in `firmware/` and `ota/`
    - **Option B**: Click "Local File" and browse for a `.bin` file
 4. **Configure Transfer**:
    - Chunk Size: 180 bytes (default, recommended)
@@ -69,7 +69,7 @@ webble/
 ## Features
 
 ### Firmware Selection
-- **Server Dropdown**: Lists all `.bin` files from `firmware/` folder
+- **Server Dropdown**: Lists `.bin` files from both `firmware/` and `ota/` folders
 - **File Size Display**: Shows firmware size in MB
 - **Refresh Button**: Reload firmware list without page refresh
 - **Local Upload**: Alternative option for firmware not on server

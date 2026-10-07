@@ -217,7 +217,7 @@
                         <div class="row">
                             <label>Server Firmware</label>
                             <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
-                                <select id="firmwareSelect" title="Choose from server firmware folder">
+                                <select id="firmwareSelect" title="Choose a server firmware file from firmware/ or ota/">
                                     <option value="">-- Select from server --</option>
                                 </select>
                                 <button id="refreshFirmwareBtn" class="small-btn" title="Refresh firmware list">🔄</button>
@@ -1812,8 +1812,9 @@
                 const option = document.createElement('option');
                 option.value = fw.path;
                 const sizeMB = (fw.size / 1024 / 1024).toFixed(2);
-                let label = `${fw.name} (${sizeMB} MB)`;
-                if (fw.version && fw.version !== 'unknown') label = `${fw.name} v${fw.version} (${sizeMB} MB)`;
+                const source = fw.path.startsWith('ota/') ? 'ota/' : 'firmware/';
+                let label = `${source}${fw.name} (${sizeMB} MB)`;
+                if (fw.version && fw.version !== 'unknown') label = `${source}${fw.name} v${fw.version} (${sizeMB} MB)`;
                 if (fw.description) label += ` - ${fw.description}`;
                 option.textContent = label;
                 select.appendChild(option);
