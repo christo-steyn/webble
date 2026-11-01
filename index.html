@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>TSF LoRaWAN ULP Gateway V1.32</title>
+    <title>TSF LoRaWAN ULP Gateway V209</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="favicon.ico">
     <link rel="stylesheet" type="text/css" href="style.css">
@@ -10,7 +10,7 @@
 <body>
     <div class="topnav">
         <div class="topnav-content">
-            <h1>TSF LoRaWAN ULP Gateway V1.32</h1>
+            <h1>TSF LoRaWAN ULP Gateway V209</h1>
             <div class="ble-controls">
                 <div class="ble-buttons">
                     <button id="bleToggleButton" class="disconnectButton">
@@ -152,6 +152,7 @@
                     <h2>Status</h2>
                     <p class="reading">Connected Sensors: <span id="connectedCount">0</span></p>
                     <p class="gray-label">Last reading: <span id="timestamp">--</span></p>
+                    <p class="gray-label">Phone location: <span id="phoneLocation">--</span></p>
                 </div>
             </div>
         </div>
@@ -342,6 +343,9 @@
                         <label><input type="checkbox" id="sen0313enabled"> SEN0313 Enabled</label>
                     </div>
                     <div class="settings-group">
+                        <label><input type="checkbox" id="pulseenabled"> Pulse Counter Enabled (applies at next wake)</label>
+                    </div>
+                    <div class="settings-group">
                         <label><input type="checkbox" id="bmpenabled"> BMP Enabled</label>
                     </div>
                     <div class="settings-group">
@@ -445,6 +449,18 @@
                     </div>
                     <p class="gray-label">Configuration Status: <span id="configStatus">Not saved</span></p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Idle prompt: the device stays awake (draining battery) while connected -->
+    <div id="idleOverlay" class="idle-overlay" hidden>
+        <div class="idle-dialog" role="alertdialog" aria-labelledby="idleTitle" aria-describedby="idleText">
+            <h3 id="idleTitle">Still using the device?</h3>
+            <p id="idleText">The device stays awake while connected. Disconnecting in <strong id="idleCountdown">60</strong> s to save its battery.</p>
+            <div class="idle-actions">
+                <button id="idleStayButton" class="subButton">Stay connected</button>
+                <button id="idleDisconnectButton" class="subButton idle-secondary">Disconnect now</button>
             </div>
         </div>
     </div>
@@ -614,6 +630,7 @@
         straingaugeenabled: reverseUuidBytes('3fa85f64-58ac-4562-b3fc-2c963f66afa6'),
         straingaugenumreadings: reverseUuidBytes('3fa85f64-58ad-4562-b3fc-2c963f66afa6'),
         sen0313enabled: reverseUuidBytes('3fa85f64-58ae-4562-b3fc-2c963f66afa6'),
+        pulseenabled: reverseUuidBytes('3fa85f64-58b2-4562-b3fc-2c963f66afa6'),
         firmwareversion: reverseUuidBytes('3fa85f64-58af-4562-b3fc-2c963f66afa6')
     };
 
@@ -844,6 +861,7 @@
                     updateDisconnectedUI();
                 }
             }, 1000);
+            startIdleTimer();
             return bleServer.getPrimaryService(bleService);
         })
         .then(service => {
@@ -856,6 +874,8 @@
             readAllCharacteristics();
             // Automatically read settings when connected
             setTimeout(readSettingsFromDevice, 1000);
+            // After the reads above, so the GATT writes don't collide
+            setTimeout(sendLocationToDevice, 4000);
         })
         .catch(error => {
             console.log('Error: ', error);
@@ -879,6 +899,8 @@
                 if (characteristic.properties.notify) {
                     characteristic.addEventListener('characteristicvaluechanged', (event) => {
                         handleCharacteristicChange(name, event.target.value);
+                        // Firmware pushes fresh values every 30 s while connected
+                        timestampContainer.innerHTML = getDateTime();
                     });
                     await characteristic.startNotifications();
                 }
@@ -894,7 +916,7 @@
     async function readAllCharacteristics() {
         for (const [name, characteristic] of Object.entries(connectedCharacteristics)) {
             // Skip settings characteristics in general read
-            if (['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval', 'firmwareversion', 'vwmoduletype', 'vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'numreadings', 'sen0313enabled', 'bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','batterytype','batterysize','battadcenabled','v012venabled','v012vnumreadings','modbusmodenabled','modbusmodbaudrate','modbusmodregaddress','modbusmodregtype','straingaugeenabled','straingaugenumreadings'].includes(name)) {
+            if (['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval', 'firmwareversion', 'vwmoduletype', 'vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'numreadings', 'sen0313enabled', 'pulseenabled', 'bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','batterytype','batterysize','battadcenabled','v012venabled','v012vnumreadings','modbusmodenabled','modbusmodbaudrate','modbusmodregaddress','modbusmodregtype','straingaugeenabled','straingaugenumreadings'].includes(name)) {
                 continue;
             }
             // Skip disabled analog readings per settings
@@ -1031,7 +1053,7 @@
 
     // Settings Functions
     async function readSettingsFromDevice() {
-        const settingsCharacteristics = ['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval', 'firmwareversion', 'vwmoduletype', 'vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'numreadings', 'sen0313enabled', 'bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','batterytype','batterysize','battadcenabled','v420enabled','v420numreadings','v012venabled','v012vnumreadings','modbusmodenabled','modbusmodbaudrate','modbusmodregaddress','modbusmodregtype','straingaugeenabled','straingaugenumreadings'];
+        const settingsCharacteristics = ['devEUI', 'joinEUI', 'appKey', 'nwkKey', 'interval', 'firmwareversion', 'vwmoduletype', 'vw1enabled', 'vw2enabled', 'vw3enabled', 'vw4enabled', 'numreadings', 'sen0313enabled', 'pulseenabled', 'bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','batterytype','batterysize','battadcenabled','v420enabled','v420numreadings','v012venabled','v012vnumreadings','modbusmodenabled','modbusmodbaudrate','modbusmodregaddress','modbusmodregtype','straingaugeenabled','straingaugenumreadings'];
         
         for (const charName of settingsCharacteristics) {
             if (!connectedCharacteristics[charName]) {
@@ -1119,6 +1141,7 @@
             case 'vw3enabled':
             case 'vw4enabled':
             case 'sen0313enabled':
+            case 'pulseenabled':
                 if (value.byteLength === 1) {
                     const enabled = new DataView(value.buffer).getUint8(0) ? true : false;
                     document.getElementById(characteristicName).checked = enabled;
@@ -1280,7 +1303,7 @@
                 console.log('numreadings written:', nr);
             }
             // Other toggles
-            for (const name of ['sen0313enabled','bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','battadcenabled','v420enabled','v012venabled','modbusmodenabled','straingaugeenabled']) {
+            for (const name of ['sen0313enabled','pulseenabled','bmpenabled','mpuenabled','tiltenabled','chargerenabled','chargingenabled','battadcenabled','v420enabled','v012venabled','modbusmodenabled','straingaugeenabled']) {
                 if (connectedCharacteristics[name]) {
                     const checked = document.getElementById(name).checked ? 1 : 0;
                     await connectedCharacteristics[name].writeValue(new Uint8Array([checked]));
@@ -1529,6 +1552,7 @@
     function updateDisconnectedUI() {
         // Clear watchdog and connection refs
         if (connWatchdog) { clearInterval(connWatchdog); connWatchdog = null; }
+        stopIdleTimer();
         bleServer = null;
         // Update UI
         bleStateContainer.innerHTML = "Device Disconnected";
@@ -1604,6 +1628,106 @@
         const configStatusEl = document.getElementById('configStatus');
         if (configStatusEl) configStatusEl.innerHTML = 'Not saved';
     }
+
+    // Idle prompt: after IDLE_PROMPT_MS without user interaction, ask whether the
+    // session is still in use; disconnect if there's no answer within IDLE_RESPONSE_MS.
+    const IDLE_PROMPT_MS = 5 * 60 * 1000;
+    const IDLE_RESPONSE_MS = 60 * 1000;
+    const idleOverlay = document.getElementById('idleOverlay');
+    const idleCountdown = document.getElementById('idleCountdown');
+    let idlePromptTimer = null;
+    let idleCountdownTimer = null;
+    let idleDeadline = 0;
+    let otaBusy = false;
+
+    function startIdleTimer() {
+        stopIdleTimer();
+        idlePromptTimer = setTimeout(showIdlePrompt, IDLE_PROMPT_MS);
+        sendKeepalive();
+    }
+
+    // The firmware drops clients after 10 min without reads/writes; tell it
+    // the page is in use (at most once a minute).
+    const KEEPALIVE_MIN_INTERVAL_MS = 60 * 1000;
+    let lastKeepalive = 0;
+    function sendKeepalive() {
+        if (!(bleServer && bleServer.connected && connectedCharacteristics.write)) return;
+        if (Date.now() - lastKeepalive < KEEPALIVE_MIN_INTERVAL_MS) return;
+        lastKeepalive = Date.now();
+        connectedCharacteristics.write.writeValue(new Uint8Array([0x30]))
+            .catch(e => { lastKeepalive = 0; console.log('Keepalive write failed:', e); });
+    }
+
+    // Send the phone's location; the device includes it in the uplink it sends
+    // when BLE disconnects. Needs HTTPS (or localhost) and location permission.
+    function sendLocationToDevice() {
+        const locationEl = document.getElementById('phoneLocation');
+        if (!('geolocation' in navigator)) { locationEl.textContent = 'Not supported'; return; }
+        locationEl.textContent = 'Locating…';
+        navigator.geolocation.getCurrentPosition(async pos => {
+            const { latitude, longitude, accuracy } = pos.coords;
+            const buf = new ArrayBuffer(11);
+            const dv = new DataView(buf);
+            dv.setUint8(0, 0x40);
+            dv.setInt32(1, Math.round(latitude * 1e6), true);
+            dv.setInt32(5, Math.round(longitude * 1e6), true);
+            dv.setUint16(9, Math.min(65535, Math.round(accuracy)), true);
+            // Retry: the write can collide with the initial settings reads
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                if (!(bleServer && bleServer.connected && connectedCharacteristics.write)) return;
+                try {
+                    await connectedCharacteristics.write.writeValue(buf);
+                    locationEl.textContent = `${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)} m) — sent`;
+                    return;
+                } catch (e) {
+                    console.log(`Location write failed (attempt ${attempt}):`, e);
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+            locationEl.textContent = 'Send failed';
+        }, err => {
+            console.log('Geolocation error:', err);
+            locationEl.textContent = err.code === err.PERMISSION_DENIED ? 'Permission denied' : 'Unavailable';
+        }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 });
+    }
+
+    function stopIdleTimer() {
+        clearTimeout(idlePromptTimer);
+        clearInterval(idleCountdownTimer);
+        idlePromptTimer = null;
+        idleCountdownTimer = null;
+        idleOverlay.hidden = true;
+    }
+
+    function showIdlePrompt() {
+        if (!(bleServer && bleServer.connected)) { stopIdleTimer(); return; }
+        // Never interrupt a firmware upload
+        if (otaBusy) { startIdleTimer(); return; }
+        idleDeadline = Date.now() + IDLE_RESPONSE_MS;
+        idleCountdown.textContent = Math.round(IDLE_RESPONSE_MS / 1000);
+        idleOverlay.hidden = false;
+        document.getElementById('idleStayButton').focus();
+        // Count against a deadline: background tabs throttle timers
+        idleCountdownTimer = setInterval(() => {
+            const left = Math.max(0, Math.ceil((idleDeadline - Date.now()) / 1000));
+            idleCountdown.textContent = left;
+            if (left === 0) {
+                console.log('Idle timeout: disconnecting');
+                stopIdleTimer();
+                if (bleServer && bleServer.connected) disconnectDevice();
+            }
+        }, 1000);
+    }
+
+    // Any interaction while connected (and not prompting) restarts the idle period
+    ['pointerdown', 'keydown', 'wheel'].forEach(evt => document.addEventListener(evt, () => {
+        if (idlePromptTimer && idleOverlay.hidden) startIdleTimer();
+    }, { passive: true }));
+    document.getElementById('idleStayButton').addEventListener('click', startIdleTimer);
+    document.getElementById('idleDisconnectButton').addEventListener('click', () => {
+        stopIdleTimer();
+        if (bleServer && bleServer.connected) disconnectDevice();
+    });
 
     function onDisconnected(event) {
         console.log('Device Disconnected:', (event?.target?.device?.name) || 'unknown');
@@ -1766,6 +1890,8 @@
         // Use either local file or server firmware
         const file = otaEls.fileInput().files[0] || otaState.selectedFirmwareBlob;
         if (!file) return;
+        otaBusy = true;
+        try {
         const ab = await file.arrayBuffer(); const all = new Uint8Array(ab);
         otaState.totalSize = all.length; const crc = crc32(all);
         otaEls.crcOut().value = '0x' + crc.toString(16).padStart(8, '0'); otaState.sentSize = 0; otaUpdateProgress(0); otaSetStatus('Starting OTA…');
@@ -1790,6 +1916,9 @@
             }
         }
         await otaState.ctrlChar.writeValue(Uint8Array.of(0x02)); otaSetStatus('Finalizing…');
+        } finally {
+            otaBusy = false;
+        }
     }
 
     async function abortOTA() {

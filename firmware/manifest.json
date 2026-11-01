@@ -26,5 +26,12 @@
     "size": 1428320,
     "version": "unknown",
     "description": ""
+  },
+  {
+    "name": "tsflorawanv209.bin",
+    "path": "firmware/tsflorawanv209.bin",
+    "size": 1433680,
+    "version": "209",
+    "description": "BLE auto-refresh, double-tap BLE start, run-first wake, uplink reason + reset cause + phone location, pulse counter setting, smaller config snapshot, SEN0313 fix"
   }
 ]

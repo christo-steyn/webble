@@ -1,6 +1,6 @@
 {
   "name": "TSFLoRa Firmware",
-  "version": "1.0.0",
+  "version": "209",
   "builds": [
     {
       "chipFamily": "ESP32-S3",

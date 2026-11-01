@@ -93,7 +93,7 @@ def main():
             print(f"Starting HTTP server on port {port}")
             server_address = ('', port)
             httpd = http.server.HTTPServer(server_address, http.server.SimpleHTTPRequestHandler)
-            print(f"Serving HTTP on 0.0.0.0 port {port} (http://0.0.0.0:{port}/) ...")
+            print(f"Serving HTTP on port {port} - open http://127.0.0.1:{port}/")
             httpd.serve_forever()
             return
     
@@ -106,7 +106,7 @@ def main():
     context.load_cert_chain(certfile, keyfile)
     httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
     
-    print(f"✓ Serving HTTPS on 0.0.0.0 port {port} (https://0.0.0.0:{port}/) ...")
+    print(f"✓ Serving HTTPS on port {port} - open https://127.0.0.1:{port}/")
     print(f"⚠ Using self-signed certificate - browsers will show security warning")
     print(f"  Accept the warning to continue (this is safe for local development)")
     
