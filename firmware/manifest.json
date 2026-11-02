@@ -33,5 +33,12 @@
     "size": 1433680,
     "version": "209",
     "description": "BLE auto-refresh, double-tap BLE start, run-first wake, uplink reason + reset cause + phone location, pulse counter setting, smaller config snapshot, SEN0313 fix"
+  },
+  {
+    "name": "tsflorawanv210.bin",
+    "path": "firmware/tsflorawanv210.bin",
+    "size": 1434256,
+    "version": "210",
+    "description": "Fix tilt section 3 accel/gyro overflow; codec reports codec_version"
   }
 ]
